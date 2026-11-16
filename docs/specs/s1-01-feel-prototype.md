@@ -23,7 +23,7 @@ status: in-dev
 - AC1 순수 로직 테스트 `dotnet test` 통과 (라운드 규칙이 로블록스판과 같은 답 — 4~40명 전부, 쫀득 모션 부피 보존·착지 눌림→지나침→멈춤·프레임레이트 무관, 이동 코요테·버퍼·다이브·넘어짐, 공격 대상·튕김·쿨다운). **Claude가 클라우드에서 확인.**
 - AC2 사용자 PC에서 프로젝트가 오류 없이 열리고 `SushiRun → Create Feel Prototype Scene` → Play가 된다 ([`SETUP.md`](../SETUP.md)).
 - AC3 (사용자) **쫀득 체크** — 아래 "에디터에서 볼 것"을 해 보고 `docs/playtest/s1-feel.md`에 느낌을 적거나 Claude에게 말로 전달.
-- AC4 회전 벨트를 봇과 같이 끝까지 달릴 수 있고(40~60초), 떨어지면 3초 뒤 체크포인트에서 부활.
+- AC4 회전 벨트(약 125 m, 체크포인트 3개)를 봇과 같이 끝까지 달릴 수 있고, 떨어지면 3초 뒤 체크포인트에서 부활. 목표 40~60초 — 개발 추정은 깔끔하게 달리면 30~40초라 실측 후 코스 길이·장애물을 맞춘다.
 - AC5 회전 꼬치에서 점프·다이브로 피하고, 맞으면 튕겨 나가 넘어진다.
 - AC6 60fps 이상(보통 PC, 봇 6명).
 
@@ -36,6 +36,7 @@ status: in-dev
 6. **관문 질문**: "그래픽이 회색 박스인데도 한 판 더 하고 싶은가?" — 예/아니요 + 이유.
 
 ## 개발 메모
+- 런타임 구조·처음 열 때 주의점: [`docs/dev-notes/s1-runtime.md`](../dev-notes/s1-runtime.md).
 - 순수 로직: `Assets/SushiRun/Core/` (UnityEngine 참조 없음) + `tests/SushiRun.Core.Tests` (xUnit, net8.0, LangVersion 9).
 - 런타임: `Assets/SushiRun/Runtime/` (Player·Camera·Level·Bots·Bootstrap), 에디터 메뉴: `Assets/SushiRun/Editor/`. 씬은 코드로 만든다(YAML 손으로 안 씀).
 - 단위: 미터. 로블록스 수치는 1 stud ≈ 0.28 m로 옮긴 뒤 이 단계에서 다시 맞춘다.
