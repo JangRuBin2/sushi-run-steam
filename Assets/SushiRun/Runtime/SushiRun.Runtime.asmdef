@@ -1,0 +1,17 @@
+{
+    "name": "SushiRun.Runtime",
+    "rootNamespace": "SushiRun.Runtime",
+    "references": [
+        "SushiRun.Core",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
