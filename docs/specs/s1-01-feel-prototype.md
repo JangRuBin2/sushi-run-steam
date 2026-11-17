@@ -36,6 +36,7 @@ status: in-dev
 6. **관문 질문**: "그래픽이 회색 박스인데도 한 판 더 하고 싶은가?" — 예/아니요 + 이유.
 
 ## 개발 메모
+- 임시 캐릭터 모습(Unity 없이 근사 렌더): ![시제품 캐릭터](../renders/s1-placeholder-character.png) — 다시 찍기: `tools/character-preview/shot.js` (SushiToyBuilder를 바꾸면 index.html도 같이).
 - 런타임 구조·처음 열 때 주의점: [`docs/dev-notes/s1-runtime.md`](../dev-notes/s1-runtime.md).
 - 순수 로직: `Assets/SushiRun/Core/` (UnityEngine 참조 없음) + `tests/SushiRun.Core.Tests` (xUnit, net8.0, LangVersion 9).
 - 런타임: `Assets/SushiRun/Runtime/` (Player·Camera·Level·Bots·Bootstrap), 에디터 메뉴: `Assets/SushiRun/Editor/`. 씬은 코드로 만든다(YAML 손으로 안 씀).

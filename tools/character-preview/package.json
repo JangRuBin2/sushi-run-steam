@@ -1,0 +1,8 @@
+{
+  "name": "sushirun-character-preview",
+  "private": true,
+  "description": "Unity 없이 시제품 캐릭터(SushiToyBuilder)를 three.js로 그려 캡처",
+  "dependencies": {
+    "three": "0.169.0"
+  }
+}

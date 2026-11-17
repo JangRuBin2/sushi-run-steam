@@ -1,0 +1,109 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+body{margin:0;background:#efe9df;font-family:"Noto Sans CJK KR","Noto Sans KR",sans-serif;color:#2b211c;width:1500px}
+h1{font-size:30px;margin:24px 28px 4px} .sub{margin:0 28px 14px;color:#78604e;font-size:15px}
+.row{display:flex;gap:14px;margin:0 28px 18px;flex-wrap:wrap}
+.cell{background:#fbf7f0;border-radius:14px;padding:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.cell canvas{display:block;border-radius:10px}
+.lbl{text-align:center;font-size:15px;margin-top:6px;font-weight:600}
+.sec{margin:6px 28px 8px;font-size:18px;font-weight:700}
+</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<h1>스시런 (Steam) — 1단계 시제품 캐릭터</h1>
+<div class="sub">SushiToyBuilder.cs를 그대로 옮겨 그린 근사 렌더 (Unity 기본 도형 크기·위치·색·광택 동일, 조명은 비슷하게 맞춤). 회색 박스 단계용 임시 모델 — 최종 아트는 3단계 정식 3D 모델.</div>
+<div class="row" id="hero"></div>
+<div class="sec">비교 — 최종 목표 품질 (콘셉트 시트, docs/reference/)</div><div class="row"><div class="cell"><img src="../../docs/reference/concept-uni-eel.png" style="width:1430px;display:block;border-radius:10px"></div></div>
+<div class="sec">초밥 종류 (봇 팔레트)</div><div class="row" id="pal"></div>
+<div class="sec">쫀득 모션 자세 (JellyMotion 값)</div><div class="row" id="pose"></div>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const C=(r,g,b)=>new THREE.Color().setRGB(r,g,b,THREE.SRGBColorSpace); // Unity Color = sRGB
+const PAL={
+ Tamago:{name:'계란',rice:C(.97,.96,.92),top:C(1,.80,.22),sm:.75,nori:true,noriC:C(.10,.17,.12),blush:C(1,.56,.62)},
+ Salmon:{name:'연어',rice:C(.97,.96,.92),top:C(1,.50,.30),sm:.78,stripes:true,acc:C(1,.88,.80),blush:C(1,.56,.62)},
+ Tuna:{name:'참치',rice:C(.97,.96,.92),top:C(.80,.12,.18),sm:.72,stripes:true,acc:C(.92,.36,.40),blush:C(1,.50,.58)},
+ Mackerel:{name:'고등어',rice:C(.97,.96,.92),top:C(.66,.74,.82),sm:.85,stripes:true,acc:C(.16,.24,.40),blush:C(1,.58,.66)},
+ Ebi:{name:'새우',rice:C(.97,.96,.92),top:C(1,.56,.36),sm:.7,stripes:true,acc:C(1,.95,.90),blush:C(1,.56,.62)},
+ Hamachi:{name:'방어',rice:C(.97,.96,.92),top:C(.98,.84,.74),sm:.8,stripes:true,acc:C(.94,.58,.56),blush:C(1,.56,.62)},
+};
+// Unity 기본 도형: Capsule 높이2 반지름0.5, Sphere 지름1, Cylinder 높이2 반지름0.5
+const GEO={Capsule:new THREE.CapsuleGeometry(.5,1,12,32),Sphere:new THREE.SphereGeometry(.5,40,24),Cylinder:new THREE.CylinderGeometry(.5,.5,2,48)};
+const D=Math.PI/180;
+function mat(color,sm){return new THREE.MeshStandardMaterial({color:color.clone(),roughness:1-sm,metalness:0});}
+function part(parent,type,pos,scl,rotDeg,m,shadow=true){
+  const o=new THREE.Mesh(GEO[type],m);o.position.set(...pos);o.scale.set(...scl);
+  if(rotDeg) o.rotation.set(rotDeg[0]*D,rotDeg[1]*D,rotDeg[2]*D,'YXZ'); // Unity Euler = Ry*Rx*Rz
+  o.castShadow=shadow;o.receiveShadow=true;parent.add(o);return o;}
+const RCY=.46,RHY=.32,RHZ=.40,RHX=.50,RCAP=.25,TPY=.74;
+function riceSurface(x,a,inset){const ax=Math.abs(x);let f=1;const inner=RHX-RCAP;
+ if(ax>inner){const k=Math.min(1,Math.max(0,(ax-inner)/RCAP));f=Math.sqrt(Math.max(0,1-k*k));}
+ const r=a*D;return [x,RCY+RHY*f*Math.cos(r)*inset,RHZ*f*Math.sin(r)*inset];}
+function build(p){
+ const visual=new THREE.Group();
+ const rice=mat(p.rice,.35), riceDark=mat(p.rice.clone().multiplyScalar(.9),.3), grain=mat(C(1,.995,.96),.5),
+  eye=mat(C(.04,.04,.06),.92), shine=mat(C(1,1,1),.3), blush=mat(p.blush,.25), mouth=mat(C(.28,.10,.10),.4);
+ for(const s of [-1,1]) part(visual,'Capsule',[.2*s,.09,0],[.17,.09,.17],null,riceDark);
+ part(visual,'Capsule',[0,RCY,0],[RHY*2,RHX,RHZ*2],[0,0,90],rice);
+ const grains=[[-.30,125],[.05,137],[.28,128],[-.10,150],[-.44,62],[-.43,112],[.44,76],[.43,116],[-.25,232],[.10,246],[.30,220],[-.05,290],[.20,300],[-.30,266],[.36,268],[-.38,205]];
+ grains.forEach((g,i)=>part(visual,'Sphere',riceSurface(g[0],g[1],.985),[.11,.075,.075],[g[1],(i*47)%180,(i*31)%90],grain,false));
+ for(const s of [-1,1]){const x=.16*s;
+  part(visual,'Sphere',[x,.50,.375],[.13,.17,.07],null,eye,false);
+  part(visual,'Sphere',[x+.028,.545,.40],[.05,.05,.03],null,shine,false);
+  part(visual,'Sphere',[x-.025,.468,.405],[.024,.024,.02],null,shine,false);
+  part(visual,'Sphere',riceSurface(.29*s,104,.975),[.12,.055,.03],[0,18*s,0],blush,false);}
+ for(let i=0;i<5;i++){const t=(i-2)/2;part(visual,'Sphere',[t*.05,.425-.016*(1-t*t),.393],[.026,.022,.02],null,mouth,false);}
+ for(const s of [-1,1]) part(visual,'Capsule',[.54*s,.42,.02],[.11,.1,.11],[0,0,70*s],rice);
+ const top=new THREE.Group();top.position.set(0,TPY,0);visual.add(top);
+ part(top,'Capsule',[0,.10,0],[.24,.56,.9],[0,0,90],mat(p.top,p.sm));
+ if(p.stripes){const a=mat(p.acc,Math.max(.3,p.sm-.1));for(let i=-1;i<=1;i++)part(top,'Sphere',[i*.28,.205,0],[.065,.03,.55],[0,24,0],a,false);}
+ if(p.nori) part(top,'Cylinder',[0,.08,0],[.34,.11,.96],[0,0,90],mat(p.noriC,.45));
+ return {visual,top};
+}
+// 쫀득 자세: JellyBody가 Visual(발바닥 피벗)에 배율·기울기, Topping에 오프셋·덜 눌림 적용
+function applyPose(c,pose){
+ const sy=pose.sy??1, sxz=1/Math.sqrt(sy);
+ c.visual.scale.set(sxz,sy,sxz);
+ c.visual.rotation.set((pose.pitch||0)*D,0,-(pose.roll||0)*D,'YXZ');
+ const ty=1+(sy-1)*.5; c.top.scale.set(1,ty/sy,1);
+ c.top.position.set(0,TPY+(pose.ty||0)/sy,(pose.tz||0)/sxz);
+}
+function shot(container,label,{palette='Tamago',yaw=-30,pitch=12,dist=2.6,w=330,h=330,pose={},fov=32}){
+ const cell=document.createElement('div');cell.className='cell';
+ const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+ r.setPixelRatio(2);r.setSize(w,h);r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
+ r.toneMapping=THREE.NeutralToneMapping;r.toneMappingExposure=1.0;r.outputColorSpace=THREE.SRGBColorSpace;
+ cell.appendChild(r.domElement);const l=document.createElement('div');l.className='lbl';l.textContent=label;cell.appendChild(l);container.appendChild(cell);
+ const scene=new THREE.Scene();scene.background=new THREE.Color('#f3ece2');
+ const pm=new THREE.PMREMGenerator(r);scene.environment=pm.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.55;
+ const root=new THREE.Group();root.scale.set(1,1,-1); // Unity(왼손) → three(오른손)
+ scene.add(root);const c=build(PAL[palette]);root.add(c.visual);applyPose(c,pose);
+ const ground=new THREE.Mesh(new THREE.CircleGeometry(3,64),new THREE.MeshStandardMaterial({color:new THREE.Color('#e9dfcf'),roughness:.9}));
+ ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+ const key=new THREE.DirectionalLight('#fff3e2',2.4);key.position.set(-2.2,4,-2.6);key.castShadow=true;
+ key.shadow.mapSize.set(2048,2048);key.shadow.radius=6;key.shadow.camera.near=.5;key.shadow.camera.far=12;
+ Object.assign(key.shadow.camera,{left:-1.5,right:1.5,top:1.5,bottom:-1.5});key.shadow.bias=-.0004;scene.add(key);
+ scene.add(new THREE.HemisphereLight('#dfeaff','#c9b79f',.9));
+ const rim=new THREE.DirectionalLight('#ffffff',.8);rim.position.set(2,2.5,3);scene.add(rim);
+ // 카메라: 캐릭터 앞(Unity +Z → three -Z) 기준 yaw
+ const cam=new THREE.PerspectiveCamera(fov,w/h,.05,50);const tgt=new THREE.Vector3(0,.48,0);
+ const yr=yaw*D,pr=pitch*D;cam.position.set(Math.sin(yr)*Math.cos(pr)*dist,tgt.y+Math.sin(pr)*dist,-Math.cos(yr)*Math.cos(pr)*dist);
+ cam.lookAt(tgt);r.render(scene,cam);
+}
+const hero=document.getElementById('hero');
+shot(hero,'계란초밥 — 3/4',{w:380,h:380,yaw:-32,dist:2.4});
+shot(hero,'정면',{yaw:0,w:300,h:300});
+shot(hero,'옆',{yaw:-90,w:300,h:300});
+shot(hero,'뒤',{yaw:180,w:300,h:300});
+const pal=document.getElementById('pal');
+for(const k of ['Tamago','Salmon','Tuna','Mackerel','Ebi','Hamachi']) shot(pal,PAL[k].name,{palette:k,w:208,h:208,yaw:-28});
+const ps=document.getElementById('pose');
+shot(ps,'가만히',{w:250,h:250,yaw:-60});
+shot(ps,'착지 눌림 (0.72배)',{w:250,h:250,yaw:-60,pose:{sy:.72,ty:-.05}});
+shot(ps,'점프 늘어남 (1.22배)',{w:250,h:250,yaw:-60,pose:{sy:1.22,ty:.04}});
+shot(ps,'달리기 시작 (앞으로 12°)',{w:250,h:250,yaw:-80,pose:{sy:.97,pitch:12,tz:-.07}});
+shot(ps,'급정거 (뒤로 9°)',{w:250,h:250,yaw:-80,pose:{sy:1.03,pitch:-9,tz:.07}});
+document.body.setAttribute('data-done','1');
+</script></body></html>
