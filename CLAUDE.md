@@ -6,6 +6,7 @@ Unity 6.3 LTS(URP)로 만드는 물리 파티 레이스 게임. 플레이어는 
 - 진행 계획·결정: **`docs/PLAN.md`** (단계와 관문). 지금 단계의 스펙: `docs/specs/`.
 - 아트·모션 품질 기준: **`docs/ART-DIRECTION.md`** — "GPT 콘셉트 시트(`docs/reference/`)와 나란히 놓아도 같은 게임처럼 보이는가", 캐릭터는 **쫀득쫀득**. 로블록스식 기본 도형 조립 아트는 회색 박스 단계에서만.
 - 사용자 PC 준비·조작: **`docs/SETUP.md`**.
+- AI 플레이테스트(Autopilot)·게임 화면 녹화: **`docs/AUTOPILOT.md`**.
 
 ## 원칙 (로블록스판에서 이어받음)
 - **스킨은 겉모습만**: 크기·히트박스·속도·공격 효과는 모두 같다. 판정 코드에 스킨 id 금지. 수익은 스킨 판매, **유료 뽑기·확률 상품 없음**.
@@ -34,6 +35,7 @@ bash tools/check.sh     # = dotnet test tests/SushiRun.Core.Tests (마지막 줄
 ```
 - **Unity 컴파일·실행은 클라우드에서 못 한다.** Runtime/Editor 코드는 꼼꼼히 리뷰하고, 보고에 "Unity 컴파일은 사용자 에디터 확인 필요"라고 분명히 적는다. 사용자가 콘솔 오류를 보내 주면 그걸로 고친다.
 - 에디터에서 확인할 것은 스펙의 "에디터에서 볼 것"에 구체적으로 적는다.
+- **Autopilot**(`com.ramenvr.autopilot` 1.0.1, `Packages/`의 tgz)으로 에디터에서 AI 플레이테스트를 돌릴 수 있다. 처음 설정(Window > Autopilot 로그인·에이전트 서비스 설치)과 `autopilot connect claude`는 **컴퓨터마다 한 번** 해야 한다. 녹화는 `Logs/Playtest/<시각>/`. 자세한 건 `docs/AUTOPILOT.md`.
 
 ## 작업 흐름
 - 스펙(`docs/specs/`) → 구현 + 테스트 → 사용자 에디터 확인 → 관문 판단 → 다음 단계.
