@@ -26,6 +26,6 @@
 | 6 | 정식 출시·운영 | | |
 
 ## 사용자 할 일 (지금)
-- [ ] GitHub에 빈 저장소 `sushi-run-steam` 만들기 (비공개 권장, README 없이) → Claude 세션에 연결
+- [x] GitHub 저장소 `sushi-run-steam` 만들기·연결 (2026-11-17)
 - [ ] [`SETUP.md`](SETUP.md)대로 Unity 6.3 LTS 설치·프로젝트 열기 → Play
 - [ ] [`specs/s1-01`](specs/s1-01-feel-prototype.md) "에디터에서 볼 것" 1~6 → 느낌 전달
