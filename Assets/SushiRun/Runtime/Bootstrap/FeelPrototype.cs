@@ -373,7 +373,7 @@ namespace SushiRun.Runtime
                 GUILayout.Label(
                     "이동 WASD/방향키 · 시점 마우스 (화면 클릭 = 잠금, Esc = 풀기)\n" +
                     "점프 Space · 다이브 Shift/E · 공격 F\n" +
-                    "R 체크포인트로 · 1 회전 벨트 · 2 꼬치 쇼다운 · Tab 튜닝 · H 도움말 끄기\n" +
+                    "R 체크포인트로 · 1 회전 벨트 · 2 꼬치 쇼다운 · Tab 튜닝 · H 도움말 끄기 · F12 스크린샷\n" +
                     "패드: 왼스틱 이동 · A 점프 · X 다이브 · LT/Y 공격 · 오른스틱 시점 · Select 튜닝 · Start 체크포인트",
                     _small);
             }
