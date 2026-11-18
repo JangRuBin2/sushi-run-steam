@@ -25,6 +25,8 @@ namespace SushiRun.Runtime
 
         [Range(0, 6)]
         public int BotCount = 5;
+        [Range(0f, 1f)] public float BotSkillBest = 0.9f;
+        [Range(0f, 1f)] public float BotSkillWorst = 0.55f;
 
         public bool ShowHelp = true;
 
@@ -181,7 +183,8 @@ namespace SushiRun.Runtime
                 SushiCharacter bot = CreateCharacter("Bot" + (i + 1) + "_" + p.Name, p, Copy(Move), Copy(Jelly));
                 var brain = bot.gameObject.AddComponent<WanderBot>();
                 brain.Level = _level;
-                brain.Skill = Random.Range(0.55f, 0.9f);
+                // 실력은 고르게 나눠요 (Bot1 가장 잘함 → 마지막 봇 가장 못함): 측정할 때 봇마다 실력이 같게
+                brain.Skill = botCount > 1 ? Mathf.Lerp(BotSkillBest, BotSkillWorst, i / (float)(botCount - 1)) : BotSkillBest;
                 bot.Input = brain;
                 _level.Register(bot, i == 0 ? 0 : i + 1);
                 _bots.Add(bot);
