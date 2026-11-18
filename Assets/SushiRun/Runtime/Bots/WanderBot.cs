@@ -208,7 +208,7 @@ namespace SushiRun.Runtime
             }
 
             // 가끔 공격 (반지름 안에 누가 있으면)
-            if (_attack != null && _attack.CanAttackNow && SomeoneNear(pos, _attack.Config.Radius * 0.9f)
+            if (_attack != null && _attack.CanAttackNow && !Level.BotAttacksPaused && SomeoneNear(pos, _attack.Config.Radius * 0.9f)
                 && Random.value < AttackChancePerSecond * Time.deltaTime)
             {
                 _attackPress = true;
