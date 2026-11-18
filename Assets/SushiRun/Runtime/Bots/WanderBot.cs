@@ -22,6 +22,9 @@ namespace SushiRun.Runtime
         [Tooltip("평지에서 초당 다이브 확률")]
         public float DiveChancePerSecond = 0.05f;
 
+        [Tooltip("점프로 건너갈 때, 내릴 자리에 낮은 막대가 (체공 시간 + 이만큼) 안에 오면 기다려요 (초)")]
+        public float LandingClearMargin = 0.6f;
+
         private SushiCharacter _ch;
         private AttackAbility _attack;
         private Vector2 _move;
@@ -131,6 +134,7 @@ namespace SushiRun.Runtime
             }
             Vector3 pos = transform.position;
             Vector3 target;
+            bool waitAtEdge = false;
 
             if (Level.BotPath.Count > 0)
             {
@@ -142,11 +146,20 @@ namespace SushiRun.Runtime
                 float dist = to.magnitude;
                 if (wp.Jump && dist < wp.Radius + 0.3f)
                 {
-                    if (_ch.IsGrounded)
+                    // 내릴 자리(다음 길 점)를 낮은 막대가 곧 쓸고 지나가면 가장자리에서 기다렸다 뛰어요
+                    Vector3 landing = Level.BotPath[Mathf.Min(_wp + 1, Level.BotPath.Count - 1)].Position;
+                    if (_ch.IsGrounded && LowBarArrivesWithin(landing, AirTime() + LandingClearMargin))
                     {
-                        TryJump(now);
+                        waitAtEdge = true;
                     }
-                    Advance();
+                    else
+                    {
+                        if (_ch.IsGrounded)
+                        {
+                            TryJump(now);
+                        }
+                        Advance();
+                    }
                 }
                 else if (!wp.Jump && dist < wp.Radius)
                 {
@@ -164,6 +177,10 @@ namespace SushiRun.Runtime
 
             Vector3 dir = target - pos;
             dir.y = 0f;
+            if (waitAtEdge)
+            {
+                dir = Vector3.zero;
+            }
             if (dir.sqrMagnitude > 1e-4f)
             {
                 dir.Normalize();
@@ -182,7 +199,15 @@ namespace SushiRun.Runtime
                 {
                     if (Level.BotEdgeJumps)
                     {
-                        TryJump(now);
+                        // 건너편 내릴 자리를 낮은 막대가 곧 쓸면 가장자리에서 멈춰 기다려요
+                        if (LowBarArrivesWithin(pos + dir * 2.5f, AirTime() + LandingClearMargin))
+                        {
+                            dir = Vector3.zero;
+                        }
+                        else
+                        {
+                            TryJump(now);
+                        }
                     }
                     else
                     {
@@ -276,6 +301,12 @@ namespace SushiRun.Runtime
                     continue;
                 }
                 float omega = h.Rotator.YawRateDeg;
+                // 같은 축으로 도는 접시 위에 서 있으면 막대는 (막대 속도 - 접시 속도)로 다가와요
+                var plate = _ch.GroundPlatform as Rotator;
+                if (plate != null && plate != h.Rotator && (plate.transform.position - pivot).sqrMagnitude < 0.25f)
+                {
+                    omega -= plate.YawRateDeg;
+                }
                 if (Mathf.Abs(omega) < 1f)
                 {
                     continue;
@@ -321,6 +352,60 @@ namespace SushiRun.Runtime
                     _suppressJumpUntil = now + 0.15f; // 높은 꼬치 아래에서는 뛰지 않기
                 }
             }
+        }
+
+        /// <summary>점프 한 번의 체공 시간 (초).</summary>
+        private float AirTime()
+        {
+            float g = Mathf.Abs(Physics.gravity.y) * Mathf.Max(0.1f, _ch.GravityScale);
+            return 2f * _ch.Tuning.JumpSpeed / g;
+        }
+
+        /// <summary>낮은 회전 막대가 seconds 안에 point를 쓸고 지나가나요 (월드 기준 회전 속도).</summary>
+        private static bool LowBarArrivesWithin(Vector3 point, float seconds)
+        {
+            List<KnockHazard> hazards = KnockHazard.Active;
+            for (int i = 0; i < hazards.Count; i++)
+            {
+                KnockHazard h = hazards[i];
+                if (h == null || !h.Low || h.Rotator == null)
+                {
+                    continue;
+                }
+                Vector3 v = point - h.Rotator.transform.position;
+                v.y = 0f;
+                float dist = v.magnitude;
+                if (dist > h.HalfLength + 0.6f || dist < 0.3f)
+                {
+                    continue;
+                }
+                float omega = h.Rotator.YawRateDeg;
+                if (Mathf.Abs(omega) < 1f)
+                {
+                    continue;
+                }
+                Vector3 barDir = h.transform.forward;
+                barDir.y = 0f;
+                float a = Vector3.SignedAngle(barDir, v, Vector3.up);
+                if (a > 90f)
+                {
+                    a -= 180f;
+                }
+                else if (a < -90f)
+                {
+                    a += 180f;
+                }
+                float time = a / omega;
+                if (time < 0f)
+                {
+                    time += 180f / Mathf.Abs(omega);
+                }
+                if (time < seconds)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private bool SomeoneNear(Vector3 pos, float radius)

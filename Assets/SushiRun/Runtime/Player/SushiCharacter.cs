@@ -72,6 +72,9 @@ namespace SushiRun.Runtime
         /// <summary>지금 밟고 있는 발판의 표면 속도 (땅이 아니면 0).</summary>
         public Vector3 PlatformVelocity { get; private set; }
 
+        /// <summary>지금 밟고 있는 움직이는 발판 (땅이 아니거나 그냥 바닥이면 null).</summary>
+        public IPlatformMotion GroundPlatform => IsGrounded ? _lastPlatform : null;
+
         /// <summary>발판 기준 속도 (연출용 — 회전 접시 위에서 가만히 있으면 0).</summary>
         public Vector3 RelativeVelocity => _rb != null ? _rb.linearVelocity - PlatformVelocity : Vector3.zero;
 
