@@ -73,6 +73,11 @@ namespace SushiRun.Runtime
             {
                 return;
             }
+            // 멈춰 있는 꼬치(판 시작·부활 직후)는 아무도 넘어뜨리지 않아요
+            if (Rotator != null && Rotator.IsHolding)
+            {
+                return;
+            }
             Transform t = Box.transform;
             Vector3 center = t.TransformPoint(Box.center);
             Vector3 half = Vector3.Scale(Box.size, t.lossyScale) * 0.5f + Vector3.one * Margin;

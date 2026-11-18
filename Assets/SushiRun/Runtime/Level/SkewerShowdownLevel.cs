@@ -14,7 +14,7 @@ namespace SushiRun.Runtime
         public const float HighStartSpeed = -30f;
         public const int SpawnSlots = 8;
         // 판 시작·플레이어 부활 때 꼬치가 멈춰 있는 시간 — 나오자마자 맞지 않게
-        public const float StartHoldSeconds = 2f;
+        public const float StartHoldSeconds = 2.5f;
 
         private Rotator _low;
         private Rotator _high;
