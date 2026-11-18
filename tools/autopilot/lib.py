@@ -26,19 +26,25 @@ def race_census(game, seconds=100, build=True, step=0.1):
         run(wait(game, 0.3))
     bots = list(game.actors("WanderBot"))
     skill = {b: game.get(b + "|WanderBot", "Skill") for b in bots}
-    st = {b: {"skill": round(skill[b], 2), "maxz": 0.0, "cps": 0, "finishes": 0, "finish_t": [], "falls": [],
+    troll = {b: game.get(b + "|WanderBot", "Troublemaker") is True for b in bots}
+    st = {b: {"skill": round(skill[b], 2), "troublemaker": troll[b], "attacks": 0, "_cd": 0.0, "maxz": 0.0, "cps": 0, "finishes": 0, "finish_t": [], "falls": [],
               "_desp": False, "_down_t": None, "_down_z": None, "_lastz": 0.0, "_start": None, "_wasfinish": False}
           for b in bots}
     clock = Clock(game)
     while clock.elapsed() < seconds:
         t = clock.elapsed()
         r = game.batch([lambda b=b: (game.get(b, "position"), game.get(b + "|SushiCharacter", "Mode"),
-                                     game.get(b + "|SushiCharacter", "IsDespawned")) for b in bots])
+                                     game.get(b + "|SushiCharacter", "IsDespawned"),
+                                     game.get(b + "|AttackAbility", "CooldownRemaining")) for b in bots])
         for b, v in zip(bots, r):
             if not isinstance(v, tuple) or not isinstance(v[0], dict):
                 continue
             pos, mode, desp = v[0], v[1], v[2] is True
             s = st[b]
+            cd = v[3] if isinstance(v[3], (int, float)) else 0.0
+            if cd > s["_cd"] + 1.0:
+                s["attacks"] += 1
+            s["_cd"] = cd
             if s["_start"] is None:
                 s["_start"] = t
             if mode == "Down" and not desp:
@@ -71,13 +77,14 @@ def race_census(game, seconds=100, build=True, step=0.1):
         for f in s["falls"]:
             k = f["section"] + ":" + f["cause"]
             by[k] = by.get(k, 0) + 1
-        out[name] = {"skill": s["skill"], "furthest": race_section(s["maxz"]), "maxz": round(s["maxz"], 1),
+        out[name] = {"skill": s["skill"], "troublemaker": s["troublemaker"], "attacks": s["attacks"], "furthest": race_section(s["maxz"]), "maxz": round(s["maxz"], 1),
                      "checkpoints": s["cps"], "finishes": s["finishes"], "finish_times": s["finish_t"],
                      "falls": len(s["falls"]), "falls_by": by}
     return out
 
 
 def print_census(out, seconds):
+    """Note: print() inside an imported module isn't captured by a probe: print the dict in the probe itself."""
     tot_f = sum(v["finishes"] for v in out.values())
     tot_falls = sum(v["falls"] for v in out.values())
     print(f"census {seconds}s: finishes {tot_f}, falls {tot_falls}")

@@ -27,6 +27,9 @@ namespace SushiRun.Runtime
         public int BotCount = 5;
         [Range(0f, 1f)] public float BotSkillBest = 0.9f;
         [Range(0f, 1f)] public float BotSkillWorst = 0.55f;
+        [Tooltip("방해꾼 봇 수 (마지막 봇부터). 실력 단계는 그대로")]
+        public int TroublemakerBots = 1;
+        public float TroublemakerAttackChance = 1.2f;
 
         public bool ShowHelp = true;
 
@@ -185,6 +188,12 @@ namespace SushiRun.Runtime
                 brain.Level = _level;
                 // 실력은 고르게 나눠요 (Bot1 가장 잘함 → 마지막 봇 가장 못함): 측정할 때 봇마다 실력이 같게
                 brain.Skill = botCount > 1 ? Mathf.Lerp(BotSkillBest, BotSkillWorst, i / (float)(botCount - 1)) : BotSkillBest;
+                if (i >= botCount - Mathf.Clamp(TroublemakerBots, 0, botCount))
+                {
+                    brain.Troublemaker = true;
+                    brain.AttackChancePerSecond = TroublemakerAttackChance;
+                    bot.name += "_방해꾼";
+                }
                 bot.Input = brain;
                 _level.Register(bot, i == 0 ? 0 : i + 1);
                 _bots.Add(bot);
