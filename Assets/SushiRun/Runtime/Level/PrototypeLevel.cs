@@ -33,6 +33,9 @@ namespace SushiRun.Runtime
         public Vector3 WanderCenter;
         public float WanderRadius = 5f;
 
+        /// <summary>true인 동안 봇이 공격하지 않아요 (판 시작 직후 등).</summary>
+        public virtual bool BotAttacksPaused => false;
+
         /// <summary>사람이 조종하는 캐릭터 (화면 글씨·대기 시간 기준).</summary>
         public SushiCharacter Player { get; set; }
 
