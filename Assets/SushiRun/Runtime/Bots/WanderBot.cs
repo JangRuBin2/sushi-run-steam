@@ -13,7 +13,7 @@ namespace SushiRun.Runtime
         public PrototypeLevel Level;
 
         [Range(0f, 1f)]
-        [Tooltip("낮은 막대를 제때 넘는 확률")]
+        [Tooltip("실력: 낮은 막대를 제때 넘는 확률이자, 건너뛰기 전에 내릴 자리를 살피는 확률")]
         public float Skill = 0.75f;
 
         [Tooltip("공격 반지름 안에 누가 있을 때 초당 공격 확률")]
@@ -41,6 +41,8 @@ namespace SushiRun.Runtime
         private Vector3 _stuckCheckPos;
         private float _stuckCheckAt;
         private readonly Dictionary<KnockHazard, float> _hazardDecided = new Dictionary<KnockHazard, float>();
+        private int _carefulForWp = -1; // 이 길 점에서 살필지 정한 결과 (점마다 한 번만 정해요)
+        private bool _careful;
 
         public Vector2 MoveWorld => _move;
 
@@ -94,6 +96,7 @@ namespace SushiRun.Runtime
         private void OnRespawned()
         {
             _hazardDecided.Clear();
+            _carefulForWp = -1;
             _nextWanderAt = 0f;
             _stuckCheckAt = Time.time + 1.5f;
             _stuckCheckPos = transform.position;
@@ -148,7 +151,7 @@ namespace SushiRun.Runtime
                 {
                     // 내릴 자리(다음 길 점)를 낮은 막대가 곧 쓸고 지나가면 가장자리에서 기다렸다 뛰어요
                     Vector3 landing = Level.BotPath[Mathf.Min(_wp + 1, Level.BotPath.Count - 1)].Position;
-                    if (_ch.IsGrounded && LowBarArrivesWithin(landing, AirTime() + LandingClearMargin))
+                    if (_ch.IsGrounded && IsCarefulHere() && LowBarArrivesWithin(landing, AirTime() + LandingClearMargin))
                     {
                         waitAtEdge = true;
                     }
@@ -200,7 +203,7 @@ namespace SushiRun.Runtime
                     if (Level.BotEdgeJumps)
                     {
                         // 건너편 내릴 자리를 낮은 막대가 곧 쓸면 가장자리에서 멈춰 기다려요
-                        if (LowBarArrivesWithin(pos + dir * 2.5f, AirTime() + LandingClearMargin))
+                        if (IsCarefulHere() && LowBarArrivesWithin(pos + dir * 2.5f, AirTime() + LandingClearMargin))
                         {
                             dir = Vector3.zero;
                         }
@@ -352,6 +355,17 @@ namespace SushiRun.Runtime
                     _suppressJumpUntil = now + 0.15f; // 높은 꼬치 아래에서는 뛰지 않기
                 }
             }
+        }
+
+        /// <summary>지금 길 점에서 내릴 자리를 살피나요 (실력 확률, 점마다 한 번 정함 — 매 프레임 다시 뽑으면 결국 다 살피게 돼요).</summary>
+        private bool IsCarefulHere()
+        {
+            if (_carefulForWp != _wp)
+            {
+                _carefulForWp = _wp;
+                _careful = Random.value < Skill;
+            }
+            return _careful;
         }
 
         /// <summary>점프 한 번의 체공 시간 (초).</summary>
