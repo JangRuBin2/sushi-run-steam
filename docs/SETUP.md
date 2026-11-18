@@ -53,6 +53,7 @@
 dotnet test tests/SushiRun.Core.Tests
 ```
 마지막 줄 `Passed! - Failed: 0`을 확인해요.
+`dotnet: command not found`가 나오면 .NET 8 SDK가 없는 거예요 (`tools/check.sh`도 같은 이유로 실패해요).
 
 ## 5. AI 플레이테스트 (선택)
 Autopilot으로 AI가 게임을 플레이하며 확인하고 화면을 녹화해요. 설정·사용법은 [AUTOPILOT.md](AUTOPILOT.md)를 봐요.
