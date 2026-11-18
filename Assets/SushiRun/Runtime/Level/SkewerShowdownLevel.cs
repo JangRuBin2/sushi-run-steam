@@ -10,6 +10,11 @@ namespace SushiRun.Runtime
         public const float PlateRadius = 8f;
         public const float LowBarY = 0.45f;
         public const float HighBarY = 1.62f;
+        public const float LowStartSpeed = 40f;
+        public const float HighStartSpeed = -30f;
+        public const int SpawnSlots = 8;
+        // 판 시작·플레이어 부활 때 꼬치가 멈춰 있는 시간 — 나오자마자 맞지 않게
+        public const float StartHoldSeconds = 2f;
 
         private Rotator _low;
         private Rotator _high;
@@ -36,7 +41,7 @@ namespace SushiRun.Runtime
             GreyboxKit.Cylinder(root, "Pillar", new Vector3(0f, -20.7f, 0f), 3.2f, 40f, GreyboxKit.Lacquer, 0.5f, false);
 
             // 낮은 꼬치 (가운데 축 포함)
-            _low = GreyboxKit.MakeRotator(root, "LowSkewer", Vector3.zero, 40f);
+            _low = GreyboxKit.MakeRotator(root, "LowSkewer", Vector3.zero, LowStartSpeed);
             _low.AccelerationDeg = 2.2f;
             _low.MaxSpeedDeg = 140f;
             GreyboxKit.Cylinder(_low.transform, "Hub", new Vector3(0f, 1.1f, 0f), 0.9f, 2.2f, GreyboxKit.Lacquer, 0.55f);
@@ -48,7 +53,7 @@ namespace SushiRun.Runtime
             });
 
             // 높은 꼬치 (반대로, 조금 느리게 시작)
-            _high = GreyboxKit.MakeRotator(root, "HighSkewer", Vector3.zero, -30f);
+            _high = GreyboxKit.MakeRotator(root, "HighSkewer", Vector3.zero, HighStartSpeed);
             _high.AccelerationDeg = 1.6f;
             _high.MaxSpeedDeg = 110f;
             Skewer(_high.transform, "HighBar", HighBarY, false, new[]
@@ -57,6 +62,7 @@ namespace SushiRun.Runtime
             });
 
             BotPath.Clear(); // 결승은 길 없이 접시 위를 돌아다님
+            ResetSkewers();
         }
 
         /// <summary>판정 상자(0.42 각) + 보이는 대꼬치와 음식 조각.</summary>
@@ -95,7 +101,7 @@ namespace SushiRun.Runtime
 
         public override Vector3 SpawnPoint(int index, out float yaw)
         {
-            const int Slots = 8;
+            const int Slots = SpawnSlots;
             float ang = (index % Slots) * 360f / Slots + (index / Slots) * 22.5f;
             Vector3 dir = Quaternion.Euler(0f, ang, 0f) * Vector3.forward;
             yaw = ang + 180f; // 가운데를 보게
@@ -131,19 +137,31 @@ namespace SushiRun.Runtime
         protected override void OnRespawned(Runner r)
         {
             r.StartTime = Time.time;
+            if (r.Ch == Player)
+            {
+                // 플레이어가 다시 올라오면 판 다시 시작 — 버틴 시간을 같은 조건에서 비교
+                ResetSkewers();
+            }
         }
 
-        /// <summary>꼬치 속도를 처음으로 (판 다시 시작).</summary>
+        /// <summary>꼬치를 처음 속도로, 출발 자리 사이 각도에 놓고 잠깐 멈춰요 (판 다시 시작).</summary>
         public void ResetSkewers()
         {
-            if (_low != null)
+            // 출발 자리(45° 간격) 사이 = 22.5° 에 두면 멈춰 있는 동안 아무도 안 걸려요
+            float between = 180f / SpawnSlots;
+            ResetSkewer(_low, LowStartSpeed, between);
+            ResetSkewer(_high, HighStartSpeed, between + 90f);
+        }
+
+        private static void ResetSkewer(Rotator skewer, float speed, float angle)
+        {
+            if (skewer == null)
             {
-                _low.ResetSpeed();
+                return;
             }
-            if (_high != null)
-            {
-                _high.ResetSpeed();
-            }
+            skewer.SpeedDeg = speed;
+            skewer.SetAngle(angle);
+            skewer.Hold(StartHoldSeconds);
         }
 
         private int AliveCount()

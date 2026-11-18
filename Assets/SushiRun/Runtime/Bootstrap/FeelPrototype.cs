@@ -285,6 +285,11 @@ namespace SushiRun.Runtime
             {
                 _player.GravityScale = Gravity;
             }
+            if (_input != null)
+            {
+                // 튜닝 패널이 열려 있으면 캐릭터 조작을 막아요 (맵을 다시 만들어도 매 프레임 맞춤)
+                _input.InputEnabled = !_showTuning;
+            }
         }
 
         private void ToggleTuning()
@@ -293,6 +298,10 @@ namespace SushiRun.Runtime
             if (_showTuning)
             {
                 UnlockCursor();
+                if (_input != null)
+                {
+                    _input.ClearPresses();
+                }
             }
         }
 

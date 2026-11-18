@@ -45,8 +45,32 @@ namespace SushiRun.Runtime
             SpeedDeg = _startSpeed;
         }
 
+        private float _holdUntil = -1f;
+
+        /// <summary>seconds 동안 멈춰 있어요 (속도·가속도 그대로, 회전만 멈춤).</summary>
+        public void Hold(float seconds)
+        {
+            _holdUntil = Time.time + Mathf.Max(0f, seconds);
+        }
+
+        public bool IsHolding => Time.time < _holdUntil;
+
+        /// <summary>부모 기준 각도로 바로 옮겨요 (순간이동 — 멈춰 있을 때만 쓰기).</summary>
+        public void SetAngle(float deg)
+        {
+            transform.localRotation = Quaternion.AngleAxis(deg, LocalAxis);
+            if (_rb != null)
+            {
+                _rb.rotation = transform.rotation;
+            }
+        }
+
         private void FixedUpdate()
         {
+            if (IsHolding)
+            {
+                return;
+            }
             float dt = Time.fixedDeltaTime;
             if (AccelerationDeg != 0f)
             {
@@ -62,6 +86,10 @@ namespace SushiRun.Runtime
         {
             get
             {
+                if (IsHolding)
+                {
+                    return Vector3.zero;
+                }
                 Quaternion rot = _rb != null ? _rb.rotation : transform.rotation;
                 return (rot * LocalAxis).normalized * (SpeedDeg * Mathf.Deg2Rad);
             }
@@ -77,6 +105,10 @@ namespace SushiRun.Runtime
         {
             get
             {
+                if (IsHolding)
+                {
+                    return 0f;
+                }
                 Quaternion rot = _rb != null ? _rb.rotation : transform.rotation;
                 return (rot * LocalAxis).normalized.y * SpeedDeg;
             }
