@@ -22,8 +22,21 @@ namespace SushiRun.Runtime
         [Tooltip("평지에서 초당 다이브 확률")]
         public float DiveChancePerSecond = 0.05f;
 
-        [Tooltip("점프로 건너갈 때, 내릴 자리에 낮은 막대가 (체공 시간 + 이만큼) 안에 오면 기다려요 (초)")]
+        [Tooltip("점프로 건너갈 때, 내릴 자리에 낮은 막대가 (착지 시각 + 이만큼) 안에 오면 기다려요 (초)")]
         public float LandingClearMargin = 0.6f;
+
+        [Tooltip("점프 지점에서 건너편 어디쯤 내리는지 (m) — 막대를 확인하는 자리")]
+        public float LandingReach = 3f;
+
+        [Tooltip("기다릴 때 도움닫기로 남겨 둘 거리 (m)")]
+        public float RunUpDistance = 2.5f;
+
+        [Header("방해꾼")]
+        [Tooltip("켜면 가까운 캐릭터를 쫓아가 밀고 때리고 다이브로 들이받아요 (판정은 같고 행동만 달라요)")]
+        public bool Troublemaker;
+        public float ChaseRadius = 5f;
+        public float ChaseSeconds = 2f;
+        public float ChaseCooldown = 3f;
 
         private SushiCharacter _ch;
         private AttackAbility _attack;
@@ -43,6 +56,9 @@ namespace SushiRun.Runtime
         private readonly Dictionary<KnockHazard, float> _hazardDecided = new Dictionary<KnockHazard, float>();
         private int _carefulForWp = -1; // 이 길 점에서 살필지 정한 결과 (점마다 한 번만 정해요)
         private bool _careful;
+        private SushiCharacter _chase;
+        private float _chaseUntil;
+        private float _nextChaseAt;
 
         public Vector2 MoveWorld => _move;
 
@@ -97,6 +113,7 @@ namespace SushiRun.Runtime
         {
             _hazardDecided.Clear();
             _carefulForWp = -1;
+            _chase = null;
             _nextWanderAt = 0f;
             _stuckCheckAt = Time.time + 1.5f;
             _stuckCheckPos = transform.position;
@@ -147,22 +164,24 @@ namespace SushiRun.Runtime
                 Vector3 to = target - pos;
                 to.y = 0f;
                 float dist = to.magnitude;
-                if (wp.Jump && dist < wp.Radius + 0.3f)
+                if (wp.Jump && _ch.IsGrounded && dist < wp.Radius + 0.3f + RunUpDistance + 1.5f && IsCarefulHere()
+                    && LandingSweptOnArrival(wp, dist))
                 {
-                    // 내릴 자리(다음 길 점)를 낮은 막대가 곧 쓸고 지나가면 가장자리에서 기다렸다 뛰어요
-                    Vector3 landing = Level.BotPath[Mathf.Min(_wp + 1, Level.BotPath.Count - 1)].Position;
-                    if (_ch.IsGrounded && IsCarefulHere() && LowBarArrivesWithin(landing, AirTime() + LandingClearMargin))
+                    // 지금 달려가 뛰면 내릴 때 낮은 막대가 그 자리를 쓸어요 → 도움닫기 거리를 두고 기다려요
+                    waitAtEdge = true;
+                    if (dist < wp.Radius + 0.3f + RunUpDistance)
                     {
-                        waitAtEdge = true;
+                        target = pos - to; // 뒤로 물러나 도움닫기 자리 확보
+                        waitAtEdge = false;
                     }
-                    else
+                }
+                else if (wp.Jump && dist < wp.Radius + 0.3f)
+                {
+                    if (_ch.IsGrounded)
                     {
-                        if (_ch.IsGrounded)
-                        {
-                            TryJump(now);
-                        }
-                        Advance();
+                        TryJump(now);
                     }
+                    Advance();
                 }
                 else if (!wp.Jump && dist < wp.Radius)
                 {
@@ -176,6 +195,16 @@ namespace SushiRun.Runtime
                     PickWanderTarget(now);
                 }
                 target = _wanderTarget;
+            }
+
+            if (Troublemaker)
+            {
+                Vector3 victim;
+                if (ChaseTarget(now, pos, out victim))
+                {
+                    target = victim;
+                    waitAtEdge = false;
+                }
             }
 
             Vector3 dir = target - pos;
@@ -202,15 +231,7 @@ namespace SushiRun.Runtime
                 {
                     if (Level.BotEdgeJumps)
                     {
-                        // 건너편 내릴 자리를 낮은 막대가 곧 쓸면 가장자리에서 멈춰 기다려요
-                        if (IsCarefulHere() && LowBarArrivesWithin(pos + dir * 2.5f, AirTime() + LandingClearMargin))
-                        {
-                            dir = Vector3.zero;
-                        }
-                        else
-                        {
-                            TryJump(now);
-                        }
+                        TryJump(now);
                     }
                     else
                     {
@@ -230,6 +251,17 @@ namespace SushiRun.Runtime
             {
                 Vector3 far = pos + dir * 3f + Vector3.up * 0.5f;
                 if (Physics.Raycast(far, Vector3.down, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                {
+                    _dive = true;
+                }
+            }
+
+            // 방해꾼: 쫓던 상대가 바로 앞이면 다이브로 들이받기
+            if (Troublemaker && _chase != null && _ch.IsGrounded && dir != Vector3.zero)
+            {
+                Vector3 toV = _chase.transform.position - pos;
+                toV.y = 0f;
+                if (toV.magnitude < 2.2f && Vector3.Dot(toV.normalized, dir) > 0.8f && Random.value < 2f * Time.deltaTime)
                 {
                     _dive = true;
                 }
@@ -368,6 +400,73 @@ namespace SushiRun.Runtime
             return _careful;
         }
 
+        /// <summary>지금 이 점프 지점으로 달려가 뛰면, 내릴 즈음 낮은 막대가 내릴 자리를 쓰나요.</summary>
+        private bool LandingSweptOnArrival(BotWaypoint wp, float dist)
+        {
+            Vector3 next = Level.BotPath[Mathf.Min(_wp + 1, Level.BotPath.Count - 1)].Position;
+            Vector3 across = next - wp.Position;
+            across.y = 0f;
+            if (across.sqrMagnitude < 1e-4f)
+            {
+                return false;
+            }
+            Vector3 landing = wp.Position + across.normalized * LandingReach;
+            float run = Mathf.Max(0f, dist - (wp.Radius + 0.3f)) / Mathf.Max(1f, _ch.Tuning.RunSpeed * _speed);
+            float land = run + AirTime();
+            float arrive = LowBarNextArrival(landing);
+            return arrive >= land - 0.25f && arrive <= land + LandingClearMargin;
+        }
+
+        /// <summary>방해꾼: 가까운 상대(플레이어 먼저)를 잠깐씩 쫓아가요. 쫓는 중이면 true.</summary>
+        private bool ChaseTarget(float now, Vector3 pos, out Vector3 victim)
+        {
+            victim = pos;
+            if (_chase != null && now < _chaseUntil && !_chase.IsDespawned && !_chase.IsDown)
+            {
+                victim = _chase.transform.position;
+                return true;
+            }
+            if (_chase != null)
+            {
+                _chase = null;
+                _nextChaseAt = now + ChaseCooldown;
+            }
+            if (now < _nextChaseAt || !_ch.IsGrounded)
+            {
+                return false;
+            }
+            SushiCharacter best = null;
+            float bestScore = float.MaxValue;
+            List<SushiCharacter> all = SushiCharacter.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                SushiCharacter o = all[i];
+                if (o == null || o == _ch || o.IsDespawned || o.IsDown)
+                {
+                    continue;
+                }
+                float d = (o.transform.position - pos).magnitude;
+                if (d > ChaseRadius)
+                {
+                    continue;
+                }
+                float score = d - (Level.Player == o ? 2f : 0f); // 사람 플레이어를 조금 더 노려요
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = o;
+                }
+            }
+            if (best == null)
+            {
+                return false;
+            }
+            _chase = best;
+            _chaseUntil = now + ChaseSeconds;
+            victim = best.transform.position;
+            return true;
+        }
+
         /// <summary>점프 한 번의 체공 시간 (초).</summary>
         private float AirTime()
         {
@@ -375,9 +474,10 @@ namespace SushiRun.Runtime
             return 2f * _ch.Tuning.JumpSpeed / g;
         }
 
-        /// <summary>낮은 회전 막대가 seconds 안에 point를 쓸고 지나가나요 (월드 기준 회전 속도).</summary>
-        private static bool LowBarArrivesWithin(Vector3 point, float seconds)
+        /// <summary>낮은 회전 막대가 point를 다음에 쓸기까지 (초, 월드 기준 회전 속도). 없으면 무한대.</summary>
+        private static float LowBarNextArrival(Vector3 point)
         {
+            float best = float.PositiveInfinity;
             List<KnockHazard> hazards = KnockHazard.Active;
             for (int i = 0; i < hazards.Count; i++)
             {
@@ -414,12 +514,9 @@ namespace SushiRun.Runtime
                 {
                     time += 180f / Mathf.Abs(omega);
                 }
-                if (time < seconds)
-                {
-                    return true;
-                }
+                best = Mathf.Min(best, time);
             }
-            return false;
+            return best;
         }
 
         private bool SomeoneNear(Vector3 pos, float radius)
