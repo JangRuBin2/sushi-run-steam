@@ -36,7 +36,7 @@ bash tools/check.sh     # = dotnet test tests/SushiRun.Core.Tests (마지막 줄
 - **Unity 컴파일·실행은 클라우드에서 못 한다.** Runtime/Editor 코드는 꼼꼼히 리뷰하고, 보고에 "Unity 컴파일은 사용자 에디터 확인 필요"라고 분명히 적는다. 사용자가 콘솔 오류를 보내 주면 그걸로 고친다.
 - 에디터에서 확인할 것은 스펙의 "에디터에서 볼 것"에 구체적으로 적는다.
 - `dotnet`이 없는 PC: `docs/SETUP.md` 4절.
-- AI 플레이테스트(Autopilot): `docs/AUTOPILOT.md`. 실행 결과 기록: `docs/playtest/`.
+- AI 플레이테스트(Autopilot): `docs/AUTOPILOT.md`. 테스트 케이스·이력: `docs/playtest/TEST-CASES.md` (실행할 때마다 갱신).
 
 ## 작업 흐름
 - 스펙(`docs/specs/`) → 구현 + 테스트 → 사용자 에디터 확인 → 관문 판단 → 다음 단계.
