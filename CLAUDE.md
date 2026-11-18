@@ -35,7 +35,8 @@ bash tools/check.sh     # = dotnet test tests/SushiRun.Core.Tests (마지막 줄
 ```
 - **Unity 컴파일·실행은 클라우드에서 못 한다.** Runtime/Editor 코드는 꼼꼼히 리뷰하고, 보고에 "Unity 컴파일은 사용자 에디터 확인 필요"라고 분명히 적는다. 사용자가 콘솔 오류를 보내 주면 그걸로 고친다.
 - 에디터에서 확인할 것은 스펙의 "에디터에서 볼 것"에 구체적으로 적는다.
-- **Autopilot**(`com.ramenvr.autopilot` 1.0.1, `Packages/`의 tgz)으로 에디터에서 AI 플레이테스트를 돌릴 수 있다. 처음 설정(Window > Autopilot 로그인·에이전트 서비스 설치)과 `autopilot connect claude`는 **컴퓨터마다 한 번** 해야 한다. 녹화는 `Logs/Playtest/<시각>/`. 자세한 건 `docs/AUTOPILOT.md`.
+- `dotnet`이 없는 PC: `docs/SETUP.md` 4절.
+- AI 플레이테스트(Autopilot): `docs/AUTOPILOT.md`. 실행 결과 기록: `docs/playtest/`.
 
 ## 작업 흐름
 - 스펙(`docs/specs/`) → 구현 + 테스트 → 사용자 에디터 확인 → 관문 판단 → 다음 단계.
