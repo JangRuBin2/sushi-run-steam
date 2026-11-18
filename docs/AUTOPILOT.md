@@ -51,7 +51,8 @@ Claude Code에서 시작한 실행도 에디터의 Autopilot 창에 실시간으
 - 실행 중 `402 billing_error` (spending limit)가 나면 AI가 아무것도 고르지 못하고 에피소드가 멈춰요.
   Autopilot 창에서 계정 크레딧이나 BYOK 키를 확인해요.
 - Autopilot이 쓰는 게임 메모(`notes.md`)와 실행 기록(`runs/`)은 Autopilot 쪽 게임 폴더에 있어요(저장소 밖).
-- 지금까지 실행 결과는 [`playtest/`](playtest/)에 날짜별로 적어요.
+- 지금까지 실행 결과는 [`playtest/`](playtest/)에 날짜별로, 테스트 케이스·통과 기준·이력은 [`playtest/TEST-CASES.md`](playtest/TEST-CASES.md)에 적어요.
+- 측정 스크립트 원본은 `tools/autopilot/lib.py` (Autopilot 게임 폴더 `%LOCALAPPDATA%\Autopilot\memory\SushiRun\lib.py`에 복사해서 써요).
 
 조작 키는 [SETUP.md 3절](SETUP.md#3-조작-시제품)과 같아요 (WASD 이동, Space 점프, Shift/E 다이브, F 공격, 1/2 맵 바꾸기).
 Autopilot 창 **Settings > Design brief**에 게임 규칙을 적어 두면, 탐색 실행이 규칙과 다른 동작을 버그로 보고해요.
