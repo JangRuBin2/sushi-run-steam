@@ -71,6 +71,8 @@ namespace SushiRun.Runtime
         private float _waitSince = -1f;
         private float _nextJudgeAt;
         private float _reflexError;
+        private bool _holding; // 기다리는 자리를 잡았음
+        private Vector3 _holdPos;
         private SushiCharacter _chase;
         private float _chaseUntil;
         private float _nextChaseAt;
@@ -127,6 +129,7 @@ namespace SushiRun.Runtime
         private void OnRespawned()
         {
             _hazardDecided.Clear();
+            _holding = false;
             ResetGate();
             _chase = null;
             _nextWanderAt = 0f;
@@ -191,11 +194,11 @@ namespace SushiRun.Runtime
                 }
                 else if (wp.Jump && dist < wp.Radius + 0.3f)
                 {
-                    if (_ch.IsGrounded)
+                    // 땅에 있으면 여기서 꼭 뛰어요 (못 눌렀으면 다음 프레임에 다시). 이미 떠 있으면 넘어가요.
+                    if (!_ch.IsGrounded || TryJump(now, true))
                     {
-                        TryJump(now);
+                        Advance();
                     }
-                    Advance();
                 }
                 else if (!wp.Jump && dist < wp.Radius)
                 {
@@ -225,7 +228,22 @@ namespace SushiRun.Runtime
             dir.y = 0f;
             if (waitAtEdge)
             {
-                dir = Vector3.zero;
+                // 기다리는 동안 그 자리를 지켜요: 도는 접시에 밀려 나가면 보고 되돌아와요 (실력이 낮으면 늦게 알아채요)
+                if (!_holding)
+                {
+                    _holding = true;
+                    _holdPos = pos;
+                }
+                dir = _holdPos - pos;
+                dir.y = 0f;
+                if (dir.magnitude < Mathf.Lerp(0.6f, 0.2f, Skill))
+                {
+                    dir = Vector3.zero;
+                }
+            }
+            else
+            {
+                _holding = false;
             }
             if (dir.sqrMagnitude > 1e-4f)
             {
@@ -245,7 +263,7 @@ namespace SushiRun.Runtime
                 {
                     if (Level.BotEdgeJumps)
                     {
-                        TryJump(now);
+                        TryJump(now, true);
                     }
                     else
                     {
@@ -260,18 +278,14 @@ namespace SushiRun.Runtime
 
             CheckHazards(now, pos);
 
-            // 가끔 다이브 (앞이 바닥일 때만)
-            if (_ch.IsGrounded && dir != Vector3.zero && Random.value < DiveChancePerSecond * Time.deltaTime)
+            // 가끔 다이브 (앞이 끊김 없이 바닥일 때만 — 틈 너머 바닥을 보고 뛰어들지 않아요)
+            if (_ch.IsGrounded && dir != Vector3.zero && Random.value < DiveChancePerSecond * Time.deltaTime && GroundAhead(pos, dir))
             {
-                Vector3 far = pos + dir * 3f + Vector3.up * 0.5f;
-                if (Physics.Raycast(far, Vector3.down, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-                {
-                    _dive = true;
-                }
+                _dive = true;
             }
 
-            // 방해꾼: 쫓던 상대가 바로 앞이면 다이브로 들이받기
-            if (Troublemaker && _chase != null && _ch.IsGrounded && dir != Vector3.zero)
+            // 방해꾼: 쫓던 상대가 바로 앞이면 다이브로 들이받기 (앞이 바닥일 때만)
+            if (Troublemaker && _chase != null && _ch.IsGrounded && dir != Vector3.zero && GroundAhead(pos, dir))
             {
                 Vector3 toV = _chase.transform.position - pos;
                 toV.y = 0f;
@@ -556,14 +570,30 @@ namespace SushiRun.Runtime
             _nextWanderAt = now + Random.Range(1.5f, 3.5f);
         }
 
-        private void TryJump(float now)
+        /// <param name="mustJump">길 끝·낭떠러지: 땅에 있으면 방금 뛴 뒤라도 눌러요 (높은 꼬치 아래 참기는 그대로)</param>
+        private bool TryJump(float now, bool mustJump = false)
         {
-            if (now < _nextJumpAllowed || now < _suppressJumpUntil)
+            if ((!mustJump && now < _nextJumpAllowed) || now < _suppressJumpUntil)
             {
-                return;
+                return false;
             }
             _jump = true;
             _nextJumpAllowed = now + 0.45f;
+            return true;
+        }
+
+        /// <summary>앞 3 m가 끊김 없이 바닥인가요 (다이브해도 되나).</summary>
+        private static bool GroundAhead(Vector3 pos, Vector3 dir)
+        {
+            for (int i = 1; i <= 6; i++)
+            {
+                Vector3 p = pos + dir * (0.5f * i) + Vector3.up * 0.5f;
+                if (!Physics.Raycast(p, Vector3.down, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         /// <summary>회전 막대가 내 쪽으로 오는 시간을 계산 → 낮으면 몸이 뜨는 시간만큼 미리 점프, 높으면 점프 참기.</summary>
