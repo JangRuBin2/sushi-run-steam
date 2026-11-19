@@ -175,7 +175,7 @@ namespace SushiRun.Runtime
             {
                 _wp = Mathf.Clamp(_wp, 0, Level.BotPath.Count - 1);
                 BotWaypoint wp = Level.BotPath[_wp];
-                target = wp.Position + (wp.Jump ? Vector3.zero : _offset);
+                target = PathPoint(_wp) + (wp.Jump ? Vector3.zero : _offset);
                 Vector3 to = target - pos;
                 to.y = 0f;
                 float dist = to.magnitude;
@@ -380,6 +380,45 @@ namespace SushiRun.Runtime
             return true;
         }
 
+        /// <summary>길 점 위치. 쓸고 지나가는 막대 구역 안의 점이면, 사람처럼 막대와 같은 방향으로 돌며 지나가는
+        /// 쪽을 골라요 (반대쪽으로 지나가면 막대와 마주 보고 달려서 한 번은 꼭 만나요).</summary>
+        private Vector3 PathPoint(int idx)
+        {
+            BotWaypoint w = Level.BotPath[idx];
+            if (w.Jump || idx == 0 || idx >= Level.BotPath.Count - 1)
+            {
+                return w.Position;
+            }
+            KnockHazard h = SweepAt(w.Position);
+            if (h == null)
+            {
+                return w.Position;
+            }
+            float omega = h.Rotator.YawRateDeg;
+            if (Mathf.Abs(omega) < 1f)
+            {
+                return w.Position;
+            }
+            Vector3 d = Level.BotPath[idx + 1].Position - Level.BotPath[idx - 1].Position;
+            d.y = 0f;
+            if (d.sqrMagnitude < 1e-4f)
+            {
+                return w.Position;
+            }
+            d.Normalize();
+            Vector3 pivot = h.Rotator.transform.position;
+            Vector3 r = w.Position - pivot;
+            r.y = 0f;
+            // 이 점에서 d로 달릴 때 축 둘레로 도는 방향 (위에서 봐서 +면 막대의 + 회전과 같은 쪽)
+            float turn = Vector3.Cross(r, d).y;
+            if (turn * omega >= 0f)
+            {
+                return w.Position;
+            }
+            Vector3 n = new Vector3(-d.z, 0f, d.x); // 진행 방향의 옆
+            return w.Position - 2f * Vector3.Dot(r, n) * n;
+        }
+
         /// <summary>낮은 막대가 쓰는 구역 안인가요.</summary>
         private bool InSweepZone(Vector3 p)
         {
@@ -414,7 +453,7 @@ namespace SushiRun.Runtime
             for (int k = 0; k < 3 && s0 < CrossLookahead; k++)
             {
                 int idx = Mathf.Min(_wp + k, Level.BotPath.Count - 1);
-                Vector3 b = Level.BotPath[idx].Position;
+                Vector3 b = PathPoint(idx);
                 Vector3 seg = b - a;
                 seg.y = 0f;
                 float len = seg.magnitude;
