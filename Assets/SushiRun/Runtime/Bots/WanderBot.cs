@@ -73,6 +73,8 @@ namespace SushiRun.Runtime
         private float _reflexError;
         private bool _holding; // 기다리는 자리를 잡았음
         private Vector3 _holdPos;
+        private float _runUpSince = -1f; // 점프 지점에서 가장자리까지 달려가는 중 (시작 시각)
+        private float _edgeLead = 0.5f; // 이만큼 앞이 낭떠러지면 뛰어요
         private SushiCharacter _chase;
         private float _chaseUntil;
         private float _nextChaseAt;
@@ -130,6 +132,7 @@ namespace SushiRun.Runtime
         {
             _hazardDecided.Clear();
             _holding = false;
+            _runUpSince = -1f;
             ResetGate();
             _chase = null;
             _nextWanderAt = 0f;
@@ -185,6 +188,7 @@ namespace SushiRun.Runtime
                 if (WaitForSweep(now, pos, wp, dist))
                 {
                     // 앞 구역을 막대가 곧 쓸어요 → 막대가 지나가기를 보며 기다려요 (점프 지점이면 도움닫기 거리를 두고)
+                    _runUpSince = -1f;
                     waitAtEdge = true;
                     if (wp.Jump && dist < wp.Radius + 0.3f + RunUpDistance)
                     {
@@ -192,12 +196,31 @@ namespace SushiRun.Runtime
                         waitAtEdge = false;
                     }
                 }
-                else if (wp.Jump && dist < wp.Radius + 0.3f)
+                else if (wp.Jump && (_runUpSince >= 0f || dist < wp.Radius + 0.3f))
                 {
-                    // 땅에 있으면 여기서 꼭 뛰어요 (못 눌렀으면 다음 프레임에 다시). 이미 떠 있으면 넘어가요.
-                    if (!_ch.IsGrounded || TryJump(now, true))
+                    // 사람처럼: 점프 지점에 오면 건너편을 보고 끝까지 달려가 가장자리에서 뛰어요 (아래 낭떠러지 확인이 누름).
+                    // 이미 떠 있으면 넘어가요. 가장자리가 안 나오면 잠깐 뒤 그 자리에서 뛰어요.
+                    if (!_ch.IsGrounded)
                     {
+                        _runUpSince = -1f;
                         Advance();
+                    }
+                    else
+                    {
+                        if (_runUpSince < 0f)
+                        {
+                            _runUpSince = now;
+                            _edgeLead = 0.5f + Random.value * (1f - Skill) * 1.2f; // 실력이 낮으면 일찍 뛰기도 해요
+                        }
+                        if (_wp + 1 < Level.BotPath.Count)
+                        {
+                            target = PathPoint(_wp + 1);
+                        }
+                        if (now - _runUpSince > 1.2f && TryJump(now, true))
+                        {
+                            _runUpSince = -1f;
+                            Advance();
+                        }
                     }
                 }
                 else if (!wp.Jump && dist < wp.Radius)
@@ -221,6 +244,7 @@ namespace SushiRun.Runtime
                 {
                     target = victim;
                     waitAtEdge = false;
+                    _runUpSince = -1f; // 쫓는 동안은 점프하러 달려가지 않아요
                 }
             }
 
@@ -254,10 +278,10 @@ namespace SushiRun.Runtime
                 dir = Vector3.zero;
             }
 
-            // 낭떠러지 확인 (앞 0.9 m 아래에 바닥이 없으면)
+            // 낭떠러지 확인 (앞 0.9 m, 점프하러 달려가는 중이면 _edgeLead 아래에 바닥이 없으면)
             if (_ch.IsGrounded && dir != Vector3.zero)
             {
-                Vector3 probe = pos + dir * 0.9f + Vector3.up * 0.5f;
+                Vector3 probe = pos + dir * (_runUpSince >= 0f ? _edgeLead : 0.9f) + Vector3.up * 0.5f;
                 bool ground = Physics.Raycast(probe, Vector3.down, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
                 if (!ground)
                 {
@@ -314,7 +338,7 @@ namespace SushiRun.Runtime
                 _stuckCheckAt = now + 1.5f;
             }
 
-            _move = SteerOnPlatform(dir * _speed);
+            _move = SteerOnPlatform(dir * (_runUpSince >= 0f ? 1f : _speed)); // 도움닫기는 힘껏
         }
 
         /// <summary>도는 접시·벨트 위에서는 실려 가는 만큼 반대로 버텨요 (사람이 하듯, 실력이 낮으면 덜).</summary>
