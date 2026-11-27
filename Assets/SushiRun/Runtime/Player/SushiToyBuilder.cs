@@ -17,10 +17,13 @@ namespace SushiRun.Runtime
         public bool NoriBand; // 김 띠 (계란초밥)
         public Color Nori;
         public Color Blush;
+        public string ToppingTexture; // Resources/Characters/ 안 이름 (Codex 텍스처). 없으면 Topping 색만
+
 
         public static SushiPalette Tamago => new SushiPalette
         {
             Name = "계란",
+            ToppingTexture = "tamago",
             Rice = new Color(0.97f, 0.96f, 0.92f),
             Topping = new Color(1.00f, 0.80f, 0.22f),
             ToppingSmoothness = 0.75f,
@@ -32,6 +35,7 @@ namespace SushiRun.Runtime
         public static SushiPalette Salmon => new SushiPalette
         {
             Name = "연어",
+            ToppingTexture = "salmon",
             Rice = new Color(0.97f, 0.96f, 0.92f),
             Topping = new Color(1.00f, 0.50f, 0.30f),
             ToppingSmoothness = 0.78f,
@@ -43,6 +47,7 @@ namespace SushiRun.Runtime
         public static SushiPalette Tuna => new SushiPalette
         {
             Name = "참치",
+            ToppingTexture = "tuna",
             Rice = new Color(0.97f, 0.96f, 0.92f),
             Topping = new Color(0.80f, 0.12f, 0.18f),
             ToppingSmoothness = 0.72f,
@@ -54,6 +59,7 @@ namespace SushiRun.Runtime
         public static SushiPalette Mackerel => new SushiPalette
         {
             Name = "고등어",
+            ToppingTexture = "mackerel_skin",
             Rice = new Color(0.97f, 0.96f, 0.92f),
             Topping = new Color(0.66f, 0.74f, 0.82f),
             ToppingSmoothness = 0.85f,
@@ -65,6 +71,7 @@ namespace SushiRun.Runtime
         public static SushiPalette Ebi => new SushiPalette
         {
             Name = "새우",
+            ToppingTexture = "ebi",
             Rice = new Color(0.97f, 0.96f, 0.92f),
             Topping = new Color(1.00f, 0.56f, 0.36f),
             ToppingSmoothness = 0.7f,
@@ -76,6 +83,7 @@ namespace SushiRun.Runtime
         public static SushiPalette Hamachi => new SushiPalette
         {
             Name = "방어",
+            ToppingTexture = "hamachi",
             Rice = new Color(0.97f, 0.96f, 0.92f),
             Topping = new Color(0.98f, 0.84f, 0.74f),
             ToppingSmoothness = 0.8f,
@@ -104,7 +112,7 @@ namespace SushiRun.Runtime
             var visual = new GameObject("Visual").transform;
             visual.SetParent(root, false);
 
-            Material rice = ProtoMaterials.Opaque(p.Rice, 0.35f);
+            Material rice = ProtoMaterials.Opaque(p.Rice, 0.35f); // 밥알 텍스처는 몸통이 지저분해 보여서 안 씀 (콘셉트: 매끈한 흰 밥)
             Material riceDark = ProtoMaterials.Opaque(p.Rice * 0.9f + new Color(0f, 0f, 0f, 0.1f), 0.3f);
             Material grain = ProtoMaterials.Opaque(new Color(1f, 0.995f, 0.96f), 0.5f);
             Material eye = ProtoMaterials.Opaque(new Color(0.04f, 0.04f, 0.06f), 0.92f);
@@ -172,10 +180,12 @@ namespace SushiRun.Runtime
             topping = new GameObject("Topping").transform;
             topping.SetParent(visual, false);
             topping.localPosition = new Vector3(0f, ToppingPivotY, 0f);
-            Material top = ProtoMaterials.Opaque(p.Topping, p.ToppingSmoothness);
+            string toppingTex = string.IsNullOrEmpty(p.ToppingTexture) ? null : "Characters/" + p.ToppingTexture;
+            bool textured = toppingTex != null && Resources.Load<Texture2D>(toppingTex) != null;
+            Material top = TexOr(toppingTex, 1.5f, p.Topping, p.ToppingSmoothness);
             ProtoMaterials.VisualPart(topping, "Slab", PrimitiveType.Capsule,
                 new Vector3(0f, 0.10f, 0f), new Vector3(0.24f, 0.56f, 0.9f), Quaternion.Euler(0f, 0f, 90f), top);
-            if (p.AccentStripes)
+            if (p.AccentStripes && !textured) // 텍스처에 이미 지방 줄무늬가 있어요
             {
                 Material accent = ProtoMaterials.Opaque(p.Accent, Mathf.Max(0.3f, p.ToppingSmoothness - 0.1f));
                 for (int i = -1; i <= 1; i++)
@@ -187,11 +197,21 @@ namespace SushiRun.Runtime
             if (p.NoriBand)
             {
                 // 김 띠: 납작한 원기둥을 X축으로 눕혀 토핑을 감싸게 (안쪽은 토핑·밥에 가려 띠만 보여요)
-                Material nori = ProtoMaterials.Opaque(p.Nori, 0.45f);
+                Material nori = TexOr("Characters/nori", 2f, p.Nori, 0.45f);
                 ProtoMaterials.VisualPart(topping, "NoriBand", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.08f, 0f), new Vector3(0.34f, 0.11f, 0.96f), Quaternion.Euler(0f, 0f, 90f), nori);
             }
             return visual;
+        }
+
+        /// <summary>Codex 텍스처 재질 (Resources에 있으면), 없으면 단색. tiling = UV 1당 반복 수.</summary>
+        private static Material TexOr(string tex, float tiling, Color fallback, float smoothness)
+        {
+            if (tex != null && Resources.Load<Texture2D>(tex) != null)
+            {
+                return SinkKit.TexMat(tex, tiling, Color.white, smoothness);
+            }
+            return ProtoMaterials.Opaque(fallback, smoothness);
         }
 
         /// <summary>밥 몸통 겉면 위 점. angleDeg: 위 0°, 앞 90°, 아래 180°, 뒤 270° (X축 둘레).</summary>

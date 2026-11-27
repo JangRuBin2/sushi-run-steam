@@ -39,6 +39,9 @@ codex exec --skip-git-repo-check -s workspace-write "<프롬프트: 그림마다
    - Hunyuan3D는 라이선스상 한국이 제외되므로 쓰지 않는다.
 3. 받은 모델은 Claude가 Unity에 넣는다. 키 약 0.95 m, 발바닥이 원점, 앞이 +Z가 되게 맞추고, `JellyBody`·토핑 지연을 연결한다.
 
+- 모델이 오기 전 임시 캐릭터(`SushiToyBuilder`)는 토핑·김에 Codex 텍스처(`Resources/Characters/`, 512 JPG)를 입힌다. 밥 몸통은 텍스처를 입히면 지저분해 보여 단색으로 둔다.
+- 캐릭터 확인 사진: `-executeMethod SushiRun.Editor.CharShot.Lineup` (초밥 6종 나란히 2장).
+
 ## 4. 확인: Unity를 창 없이 실행해 스크린샷
 
 열려 있는 에디터나 사용자 화면에 창을 띄우지 않는다. **작업용 worktree**(예: `C:\hobby\_dev-sushi-run-steam`)에서 배치 모드로 돌린다.
