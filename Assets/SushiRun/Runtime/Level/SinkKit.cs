@@ -270,7 +270,7 @@ namespace SushiRun.Runtime
             for (int s = -1; s <= 1; s += 2)
             {
                 Part(root, "Wall", MeshKit.RoundedBox(new Vector3(1.2f, rimY - floorY, zLen), 0.5f), new Vector3(s * (halfW + 0.6f), (rimY + floorY) * 0.5f, zMid), Quaternion.identity, steel);
-                Part(root, "Counter", MeshKit.RoundedBox(new Vector3(40f, 1.2f, zLen + 40f), 0.5f), new Vector3(s * (halfW + 21f), rimY - 0.6f, zMid), Quaternion.identity, TexMat("counter_top", 0.06f, Color.white, 0.35f));
+                Part(root, "Counter", MeshKit.RoundedBox(new Vector3(40f, 1.2f, zLen + 40f), 0.5f), new Vector3(s * (halfW + 21f), rimY - 0.6f, zMid), Quaternion.identity, TexMat("counter_top", 0.15f, new Color(0.86f, 0.82f, 0.76f), 0.35f));
             }
             Part(root, "WallFront", MeshKit.RoundedBox(new Vector3(halfW * 2f + 2.4f, rimY - floorY, 1.2f), 0.5f), new Vector3(0f, (rimY + floorY) * 0.5f, zMid - zLen * 0.5f), Quaternion.identity, steel);
             Part(root, "WallBack", MeshKit.RoundedBox(new Vector3(halfW * 2f + 2.4f, rimY - floorY, 1.2f), 0.5f), new Vector3(0f, (rimY + floorY) * 0.5f, zMid + zLen * 0.5f), Quaternion.identity, steel);
@@ -307,7 +307,13 @@ namespace SushiRun.Runtime
                 }
                 backdrop.mainTexture = backdropTex;
                 owned.Add(backdrop);
-                ProtoMaterials.VisualPart(root, "Backdrop", PrimitiveType.Quad, new Vector3(0f, rimY + 44f, wallZ + 8f), new Vector3(190f, 107f, 1f), Quaternion.identity, backdrop, false);
+                // 정면 + 양옆 (옆은 같은 그림을 돌려 세움 — 빈 하늘이 안 보이게)
+                ProtoMaterials.VisualPart(root, "Backdrop", PrimitiveType.Quad, new Vector3(0f, rimY + 50f, wallZ + 8f), new Vector3(280f, 158f, 1f), Quaternion.identity, backdrop, false);
+                for (int s = -1; s <= 1; s += 2)
+                {
+                    ProtoMaterials.VisualPart(root, "BackdropSide", PrimitiveType.Quad, new Vector3(s * 140f, rimY + 50f, zMid + 20f),
+                        new Vector3(280f, 158f, 1f), Quaternion.Euler(0f, s * 90f, 0f), backdrop, false);
+                }
             }
 
             // 수도꼭지 (왼쪽 조리대에서 물 위로 굽어 나옴) + 떨어지는 물줄기
