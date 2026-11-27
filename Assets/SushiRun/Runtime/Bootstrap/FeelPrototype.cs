@@ -53,6 +53,30 @@ namespace SushiRun.Runtime
         private FollowCamera _cam;
         private Light _sun;
         private readonly List<SushiCharacter> _bots = new List<SushiCharacter>();
+        private readonly List<int> _botIndex = new List<int>(); // _bots[k]가 몇 번 봇인지 (한 판 흐름에서 같은 봇을 이어 가요)
+
+        public PrototypeLevel CurrentLevel => _level;
+        public SushiCharacter PlayerCharacter => _player;
+        public int BotSlots => Mathf.Clamp(BotCount, 0, 6);
+
+        /// <summary>한 판 흐름(MatchDirector)이 라운드 맵을 만들 때: 남은 봇만, 떨어지면 탈락·완주하면 빠지는 모드로.</summary>
+        public void BuildRound(LevelKind kind, ICollection<int> bots)
+        {
+            Build(kind, bots, true);
+        }
+
+        /// <summary>자유 연습 (숫자 키와 같음).</summary>
+        public void BuildFree(LevelKind kind)
+        {
+            Build(kind);
+        }
+
+        /// <summary>이 캐릭터가 몇 번 봇인지 (플레이어·모르는 캐릭터는 -1).</summary>
+        public int BotIndexOf(SushiCharacter ch)
+        {
+            int k = _bots.IndexOf(ch);
+            return k >= 0 ? _botIndex[k] : -1;
+        }
 
         private bool _showTuning;
         private float _fps = 60f;
@@ -149,6 +173,7 @@ namespace SushiRun.Runtime
             _playerAttack = null;
             _input = null;
             _bots.Clear();
+            _botIndex.Clear();
             AttackAbility.Book = new AttackBook();
             if (_cam != null)
             {
@@ -157,7 +182,7 @@ namespace SushiRun.Runtime
             }
         }
 
-        private void Build(LevelKind kind)
+        private void Build(LevelKind kind, ICollection<int> onlyBots = null, bool matchMode = false)
         {
             Clear();
             _runRoot = new GameObject("Run_" + kind);
@@ -196,6 +221,7 @@ namespace SushiRun.Runtime
             {
                 _level = levelGo.AddComponent<SkewerShowdownLevel>();
             }
+            _level.MatchMode = matchMode;
             _level.Build();
 
             // 플레이어 (계란초밥) — 튜닝 객체를 그대로 써서 슬라이더가 바로 반영
@@ -212,6 +238,10 @@ namespace SushiRun.Runtime
             int botCount = Mathf.Clamp(BotCount, 0, 6);
             for (int i = 0; i < botCount; i++)
             {
+                if (onlyBots != null && !onlyBots.Contains(i))
+                {
+                    continue; // 한 판 흐름: 앞 라운드에서 떨어진 봇은 안 나와요
+                }
                 SushiPalette p = palettes[i % palettes.Length];
                 SushiCharacter bot = CreateCharacter("Bot" + (i + 1) + "_" + p.Name, p, Copy(Move), Copy(Jelly));
                 var brain = bot.gameObject.AddComponent<WanderBot>();
@@ -227,6 +257,7 @@ namespace SushiRun.Runtime
                 bot.Input = brain;
                 _level.Register(bot, i == 0 ? 0 : i + 1);
                 _bots.Add(bot);
+                _botIndex.Add(i);
             }
 
             if (_cam != null)
@@ -308,6 +339,17 @@ namespace SushiRun.Runtime
                 else if (kb.digit8Key.wasPressedThisFrame)
                 {
                     Build(LevelKind.Onsen);
+                }
+                else if (kb.mKey.wasPressedThisFrame)
+                {
+                    // 한 판 흐름: 레이스 → 생존 → 결승 (봇과 함께, 통과 인원은 RoundRules)
+                    MatchDirector director = GetComponent<MatchDirector>();
+                    if (director == null)
+                    {
+                        director = gameObject.AddComponent<MatchDirector>();
+                    }
+                    director.Game = this;
+                    director.StartMatch();
                 }
                 if (kb.rKey.wasPressedThisFrame && _level != null && _player != null)
                 {
@@ -448,7 +490,7 @@ namespace SushiRun.Runtime
                 GUILayout.Label(
                     "이동 WASD/방향키 · 시점 마우스 (화면 클릭 = 잠금, Esc = 풀기)\n" +
                     "점프 Space · 다이브 Shift/E · 공격 F\n" +
-                    "R 체크포인트로 · 1 회전 벨트 · 2 꼬치 쇼다운 · 3 설거지통 · 4 우주 · 5 밥솥 · 6 찻잎 정원 · 7 수산시장 · 8 온천탕 · Tab 튜닝 · H 도움말 끄기 · F12 스크린샷\n" +
+                    "R 체크포인트로 · 1 회전 벨트 · 2 꼬치 쇼다운 · 3 설거지통 · 4 우주 · 5 밥솥 · 6 찻잎 정원 · 7 수산시장 · 8 온천탕 · M 한 판(라운드 3개) · Tab 튜닝 · H 도움말 끄기 · F12 스크린샷\n" +
                     "패드: 왼스틱 이동 · A 점프 · X 다이브 · LT/Y 공격 · 오른스틱 시점 · Select 튜닝 · Start 체크포인트",
                     _small);
             }

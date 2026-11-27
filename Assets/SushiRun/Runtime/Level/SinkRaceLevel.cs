@@ -211,6 +211,10 @@ namespace SushiRun.Runtime
             {
                 return;
             }
+            if (MatchFinish(r))
+            {
+                return; // 한 판 흐름: 완주하면 빠져요
+            }
             r.Finished = true;
             r.FinishTime = Time.time - r.StartTime;
             if (r.Best < 0f || r.FinishTime < r.Best)

@@ -24,6 +24,10 @@ namespace SushiRun.Runtime
 
         public override string Title => "수산시장 생존 (Survival)";
 
+        public override bool FallEliminates => true;
+
+        public override float RoundTimeLeft => Mathf.Max(0f, RoundSeconds - (Time.time - _roundStart));
+
         public override void Build()
         {
             KillY = -3f;
@@ -143,6 +147,10 @@ namespace SushiRun.Runtime
         protected override void Update()
         {
             base.Update();
+            if (MatchMode)
+            {
+                return; // 한 판 흐름: 시간이 다 되면 MatchDirector가 라운드를 끝내요 (여기서 판을 다시 시작하지 않음)
+            }
             float now = Time.time;
             if (_clearedUntil < 0f && now - _roundStart >= RoundSeconds)
             {
