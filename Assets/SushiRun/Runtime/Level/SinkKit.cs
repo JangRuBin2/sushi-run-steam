@@ -29,6 +29,40 @@ namespace SushiRun.Runtime
         private static void ResetStatics()
         {
             s_mats.Clear();
+            s_texMats.Clear();
+        }
+
+        private static readonly Dictionary<string, Material> s_texMats = new Dictionary<string, Material>();
+
+        /// <summary>텍스처 재질 (공유). tex = Resources/Sink/ 안 이름 (Codex로 뽑은 그림), tiling = 1 m당 반복 수.
+        /// 텍스처가 없으면 tint 색만 쓴 재질로 (회색 박스처럼).</summary>
+        public static Material TexMat(string tex, float tiling, Color tint, float smoothness, float metallic = 0f)
+        {
+            string key = tex + "|" + tiling + "|" + ColorUtility.ToHtmlStringRGBA(tint) + "|" + smoothness + "|" + metallic;
+            Material m;
+            if (s_texMats.TryGetValue(key, out m) && m != null)
+            {
+                return m;
+            }
+            m = new Material(Mat(tint, smoothness, metallic));
+            m.name = "Sink_" + tex;
+            var t = Resources.Load<Texture2D>("Sink/" + tex);
+            if (t != null)
+            {
+                t.wrapMode = TextureWrapMode.Repeat;
+                if (m.HasProperty("_BaseMap"))
+                {
+                    m.SetTexture("_BaseMap", t);
+                    m.SetTextureScale("_BaseMap", Vector2.one * tiling);
+                }
+                if (m.HasProperty("_MainTex"))
+                {
+                    m.SetTexture("_MainTex", t);
+                    m.SetTextureScale("_MainTex", Vector2.one * tiling);
+                }
+            }
+            s_texMats[key] = m;
+            return m;
         }
 
         /// <summary>불투명 재질 (공유). metallic > 0 이면 금속 (스테인리스).</summary>
@@ -146,20 +180,8 @@ namespace SushiRun.Runtime
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = floorCenter + Vector3.up * (size.y * 0.5f);
-            Part(go.transform, "Body", MeshKit.RoundedBox(new Vector3(size.x, 1.0f, size.z), 0.22f), new Vector3(0f, -0.2f, 0f), Quaternion.identity, Mat(SpongeYellow, 0.15f));
-            Part(go.transform, "Scrub", MeshKit.RoundedBox(new Vector3(size.x, 0.42f, size.z), 0.12f), new Vector3(0f, 0.49f, 0f), Quaternion.identity, Mat(ScrubGreen, 0.1f));
-            // 스펀지 구멍 (진한 점)
-            Material hole = Mat(new Color(0.88f, 0.66f, 0.10f), 0.05f);
-            for (int i = 0; i < 6; i++)
-            {
-                float x = (i % 3 - 1) * 0.62f;
-                float y = -0.42f + (i / 3) * 0.42f;
-                for (int s = -1; s <= 1; s += 2)
-                {
-                    ProtoMaterials.VisualPart(go.transform, "Pore", PrimitiveType.Sphere, new Vector3(x + 0.1f * s, y, s * (size.z * 0.5f + 0.005f)),
-                        new Vector3(0.16f, 0.13f, 0.04f), Quaternion.identity, hole, false);
-                }
-            }
+            Part(go.transform, "Body", MeshKit.RoundedBox(new Vector3(size.x, 1.0f, size.z), 0.22f), new Vector3(0f, -0.2f, 0f), Quaternion.identity, TexMat("sponge_yellow", 0.45f, Color.white, 0.12f));
+            Part(go.transform, "Scrub", MeshKit.RoundedBox(new Vector3(size.x, 0.42f, size.z), 0.12f), new Vector3(0f, 0.49f, 0f), Quaternion.identity, TexMat("scrub_green", 0.6f, Color.white, 0.1f));
             go.AddComponent<BoxCollider>().size = size;
             var mover = go.AddComponent<SineMover>();
             mover.Axis = Vector3.right;
@@ -195,7 +217,7 @@ namespace SushiRun.Runtime
                 new Vector2(0f, barHeight + 0.42f), new Vector2(0.38f, barHeight + 0.40f), new Vector2(0.5f, barHeight + 0.25f),
                 new Vector2(0.5f, 0.1f), new Vector2(0.62f, 0f), new Vector2(0f, 0f),
             };
-            Part(p, "Post", MeshKit.Lathe(post, 32), Vector3.zero, Quaternion.identity, Mat(Steel, 0.8f, 0.35f));
+            Part(p, "Post", MeshKit.Lathe(post, 32), Vector3.zero, Quaternion.identity, TexMat("steel_brushed", 0.25f, Color.white, 0.8f, 0.35f));
 
             var bar = new GameObject("Bar");
             bar.transform.SetParent(p, false);
@@ -235,8 +257,8 @@ namespace SushiRun.Runtime
         {
             var root = new GameObject("Sink").transform;
             root.SetParent(parent, false);
-            Material steel = Mat(Steel, 0.82f, 0.35f);
-            Material steelDark = Mat(SteelDark, 0.7f, 0.35f);
+            Material steel = TexMat("steel_brushed", 0.25f, Color.white, 0.82f, 0.35f);
+            Material steelDark = TexMat("steel_brushed", 0.25f, SteelDark, 0.7f, 0.35f);
             float zMid = length * 0.5f;
             float zLen = length + 30f;
             const float halfW = 15f;
@@ -248,7 +270,7 @@ namespace SushiRun.Runtime
             for (int s = -1; s <= 1; s += 2)
             {
                 Part(root, "Wall", MeshKit.RoundedBox(new Vector3(1.2f, rimY - floorY, zLen), 0.5f), new Vector3(s * (halfW + 0.6f), (rimY + floorY) * 0.5f, zMid), Quaternion.identity, steel);
-                Part(root, "Counter", MeshKit.RoundedBox(new Vector3(40f, 1.2f, zLen + 40f), 0.5f), new Vector3(s * (halfW + 21f), rimY - 0.6f, zMid), Quaternion.identity, Mat(Counter, 0.3f));
+                Part(root, "Counter", MeshKit.RoundedBox(new Vector3(40f, 1.2f, zLen + 40f), 0.5f), new Vector3(s * (halfW + 21f), rimY - 0.6f, zMid), Quaternion.identity, TexMat("counter_top", 0.06f, Color.white, 0.35f));
             }
             Part(root, "WallFront", MeshKit.RoundedBox(new Vector3(halfW * 2f + 2.4f, rimY - floorY, 1.2f), 0.5f), new Vector3(0f, (rimY + floorY) * 0.5f, zMid - zLen * 0.5f), Quaternion.identity, steel);
             Part(root, "WallBack", MeshKit.RoundedBox(new Vector3(halfW * 2f + 2.4f, rimY - floorY, 1.2f), 0.5f), new Vector3(0f, (rimY + floorY) * 0.5f, zMid + zLen * 0.5f), Quaternion.identity, steel);
@@ -270,19 +292,23 @@ namespace SushiRun.Runtime
                 FoamCluster(root, new Vector3(side, waterY, z), 2.2f + (i % 3) * 0.6f, i);
             }
 
-            // 뒤 타일 벽 + 창문 빛
+            // 뒤 타일 벽(조리대 위 낮게) + 그 뒤 주방 배경 그림 (Codex로 뽑은 그림, 빛 안 받는 재질)
             float wallZ = zMid + zLen * 0.5f + 22f;
-            Part(root, "TileWall", MeshKit.RoundedBox(new Vector3(140f, 70f, 2f), 0.5f), new Vector3(0f, rimY + 34f, wallZ), Quaternion.identity, Mat(Tile, 0.6f));
-            Material grout = Mat(new Color(0.74f, 0.83f, 0.88f), 0.4f);
-            for (int i = -8; i <= 8; i++)
+            Part(root, "TileWall", MeshKit.RoundedBox(new Vector3(140f, 16f, 2f), 0.5f), new Vector3(0f, rimY + 8f, wallZ), Quaternion.identity, TexMat("tile_wall", 0.125f, Color.white, 0.7f));
+            var backdropTex = Resources.Load<Texture2D>("Sink/kitchen_backdrop");
+            if (backdropTex != null)
             {
-                ProtoMaterials.VisualPart(root, "Grout", PrimitiveType.Cube, new Vector3(i * 8f, rimY + 34f, wallZ - 1.02f), new Vector3(0.25f, 70f, 0.02f), Quaternion.identity, grout, false);
+                Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
+                var backdrop = new Material(unlit != null ? unlit : Shader.Find("Unlit/Texture"));
+                backdrop.name = "Sink_Backdrop";
+                if (backdrop.HasProperty("_BaseMap"))
+                {
+                    backdrop.SetTexture("_BaseMap", backdropTex);
+                }
+                backdrop.mainTexture = backdropTex;
+                owned.Add(backdrop);
+                ProtoMaterials.VisualPart(root, "Backdrop", PrimitiveType.Quad, new Vector3(0f, rimY + 44f, wallZ + 8f), new Vector3(190f, 107f, 1f), Quaternion.identity, backdrop, false);
             }
-            for (int j = 0; j < 9; j++)
-            {
-                ProtoMaterials.VisualPart(root, "Grout", PrimitiveType.Cube, new Vector3(0f, rimY + 2f + j * 8f, wallZ - 1.02f), new Vector3(140f, 0.25f, 0.02f), Quaternion.identity, grout, false);
-            }
-            Part(root, "Window", MeshKit.RoundedBox(new Vector3(46f, 26f, 0.6f), 1.2f), new Vector3(18f, rimY + 30f, wallZ - 1.2f), Quaternion.identity, Mat(new Color(1f, 0.98f, 0.92f), 0.9f), false);
 
             // 수도꼭지 (왼쪽 조리대에서 물 위로 굽어 나옴) + 떨어지는 물줄기
             Vector3 fBase = new Vector3(-halfW - 3f, rimY, zMid);
@@ -323,8 +349,8 @@ namespace SushiRun.Runtime
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = Sky;
-            RenderSettings.fogStartDistance = 80f;
-            RenderSettings.fogEndDistance = 320f;
+            RenderSettings.fogStartDistance = 150f;
+            RenderSettings.fogEndDistance = 420f;
         }
     }
 }

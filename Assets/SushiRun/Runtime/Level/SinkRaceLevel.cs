@@ -27,7 +27,7 @@ namespace SushiRun.Runtime
             SinkKit.SinkBasin(root, WaterY, 125f, _owned);
 
             // 1. 출발 도마
-            Material board = SinkKit.Mat(SinkKit.BoardWood, 0.35f);
+            Material board = SinkKit.TexMat("wood_board", 0.15f, Color.white, 0.35f);
             SinkKit.Slab(root, "StartBoard", new Vector3(0f, 0f, 3f), new Vector3(12f, 0.8f, 10f), 0.3f, board);
             Material groove = SinkKit.Mat(new Color(0.66f, 0.48f, 0.30f), 0.3f);
             ProtoMaterials.VisualPart(root, "BoardGroove", PrimitiveType.Cube, new Vector3(0f, 0.003f, -1.4f), new Vector3(10.6f, 0.006f, 0.25f), Quaternion.identity, groove, false);
@@ -44,9 +44,9 @@ namespace SushiRun.Runtime
             SoapBar(root, new Vector3(-3f, 0f, 43.2f), new Color(1f, 0.70f, 0.80f));
 
             // 4. 가운데 칸막이 위 + 좌우로 미는 스펀지 3개
-            Material steel = SinkKit.Mat(SinkKit.Steel, 0.82f, 0.35f);
+            Material steel = SinkKit.TexMat("steel_brushed", 0.25f, Color.white, 0.82f, 0.35f);
             SinkKit.Slab(root, "Divider", new Vector3(0f, 0f, 57f), new Vector3(4.5f, 1f, 24f), 0.25f, steel);
-            SinkKit.Part(root, "DividerStem", MeshKit.RoundedBox(new Vector3(3.2f, 8f, 24f), 0.4f), new Vector3(0f, -5f, 57f), Quaternion.identity, SinkKit.Mat(SinkKit.SteelDark, 0.7f, 0.35f));
+            SinkKit.Part(root, "DividerStem", MeshKit.RoundedBox(new Vector3(3.2f, 8f, 24f), 0.4f), new Vector3(0f, -5f, 57f), Quaternion.identity, SinkKit.TexMat("steel_brushed", 0.25f, SinkKit.SteelDark, 0.7f, 0.35f));
             SinkKit.Sponge(root, "Sponge1", new Vector3(0f, 0f, 50.5f), 4f, 7f, 0f);
             SinkKit.Sponge(root, "Sponge2", new Vector3(0f, 0f, 57f), 4f, 8f, 0.5f);
             SinkKit.Sponge(root, "Sponge3", new Vector3(0f, 0f, 63.5f), 4f, 6.5f, 0.25f);
@@ -62,7 +62,7 @@ namespace SushiRun.Runtime
             // 7. 체크포인트 3 + 마지막 솔
             CheckpointPad(root, 2, new Vector3(0f, 0f, 96.8f), new Vector2(8f, 5f));
             SinkKit.Slab(root, "DrainBoard", new Vector3(0f, 0f, 106.2f), new Vector3(7f, 0.8f, 13.8f), 0.25f, steel);
-            Material ridge = SinkKit.Mat(SinkKit.SteelDark, 0.75f, 0.35f);
+            Material ridge = SinkKit.TexMat("steel_brushed", 0.25f, SinkKit.SteelDark, 0.75f, 0.35f);
             for (int i = 0; i < 8; i++)
             {
                 ProtoMaterials.VisualPart(root, "Ridge", PrimitiveType.Cube, new Vector3(-2.8f + i * 0.8f, 0.01f, 106.2f), new Vector3(0.08f, 0.02f, 13f), Quaternion.identity, ridge, false);
@@ -114,7 +114,7 @@ namespace SushiRun.Runtime
         /// <summary>도마·발판 아래 받침 다리 (물속으로, 장식).</summary>
         private static void Legs(Transform root, Vector3 top, Vector2 span)
         {
-            Material m = SinkKit.Mat(SinkKit.SteelDark, 0.7f, 0.35f);
+            Material m = SinkKit.TexMat("steel_brushed", 0.25f, SinkKit.SteelDark, 0.7f, 0.35f);
             for (int sx = -1; sx <= 1; sx += 2)
             {
                 for (int sz = -1; sz <= 1; sz += 2)
@@ -144,7 +144,7 @@ namespace SushiRun.Runtime
             for (int s = -1; s <= 1; s += 2)
             {
                 Vector3 pole = new Vector3(topCenter.x + s * (sizeXZ.x * 0.5f - 0.4f), topCenter.y, entryZ);
-                SinkKit.Part(root, "Pole", MeshKit.RoundedBox(new Vector3(0.14f, 2.2f, 0.14f), 0.06f), pole + Vector3.up * 1.1f, Quaternion.identity, SinkKit.Mat(SinkKit.Steel, 0.8f, 0.35f));
+                SinkKit.Part(root, "Pole", MeshKit.RoundedBox(new Vector3(0.14f, 2.2f, 0.14f), 0.06f), pole + Vector3.up * 1.1f, Quaternion.identity, SinkKit.TexMat("steel_brushed", 0.25f, Color.white, 0.8f, 0.35f));
                 SinkKit.Part(root, "Flag", MeshKit.RoundedBox(new Vector3(0.6f, 0.4f, 0.05f), 0.02f), pole + new Vector3(-s * 0.35f, 1.9f, 0f), Quaternion.identity, SinkKit.Mat(GreyboxKit.CheckpointColor, 0.4f));
             }
             Vector3 respawn = new Vector3(topCenter.x, topCenter.y + 0.05f, topCenter.z);
@@ -156,7 +156,7 @@ namespace SushiRun.Runtime
         {
             SinkKit.Slab(root, "FinishTray", topCenter, new Vector3(12f, 0.8f, 10f), 0.35f, SinkKit.Mat(SinkKit.Ceramic, 0.8f));
             Legs(root, topCenter + Vector3.down * 0.8f, new Vector2(10f, 8f));
-            Material wire = SinkKit.Mat(SinkKit.Steel, 0.85f, 0.35f);
+            Material wire = SinkKit.TexMat("steel_brushed", 0.25f, Color.white, 0.85f, 0.35f);
             float z = FinishZ;
             for (int s = -1; s <= 1; s += 2)
             {
