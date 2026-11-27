@@ -37,6 +37,8 @@ namespace SushiRun.Runtime
 
         public override string Title => "찻잎 정원 결승 (Final)";
 
+        public override bool FallEliminates => true;
+
         public override bool BotAttacksPaused => _cup != null && _cup.IsHolding;
 
         public override void Build()

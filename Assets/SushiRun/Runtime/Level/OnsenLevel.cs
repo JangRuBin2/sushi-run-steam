@@ -36,6 +36,8 @@ namespace SushiRun.Runtime
 
         public override string Title => "온천탕 인형뽑기 결승 (Final)";
 
+        public override bool FallEliminates => true;
+
         public override void Build()
         {
             KillY = WaterY - 0.25f; // 온천물에 닿으면 탈락

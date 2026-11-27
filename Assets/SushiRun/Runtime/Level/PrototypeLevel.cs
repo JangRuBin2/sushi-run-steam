@@ -36,6 +36,67 @@ namespace SushiRun.Runtime
         /// <summary>true인 동안 봇이 공격하지 않아요 (판 시작 직후 등).</summary>
         public virtual bool BotAttacksPaused => false;
 
+        /// <summary>한 판 흐름의 라운드인가요. 켜면: 레이스는 완주하면 빠지고(다시 안 달림), 생존·결승은 떨어지면 탈락(부활 없음).</summary>
+        public bool MatchMode;
+
+        /// <summary>한 판 흐름: 완주(레이스) — 통과 순서대로 불려요.</summary>
+        public event System.Action<SushiCharacter> MatchFinished;
+
+        /// <summary>한 판 흐름: 떨어져서 탈락 (생존·결승).</summary>
+        public event System.Action<SushiCharacter> MatchEliminated;
+
+        /// <summary>떨어지면 탈락인 맵 (생존·결승). 레이스는 false — 체크포인트에서 다시.</summary>
+        public virtual bool FallEliminates => false;
+
+        /// <summary>시간 제한 라운드의 남은 초 (생존). 없으면 -1.</summary>
+        public virtual float RoundTimeLeft => -1f;
+
+        /// <summary>아직 남아 있는(빠지지 않은) 캐릭터 수.</summary>
+        public int InCount
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < Runners.Count; i++)
+                {
+                    if (Runners[i].Ch != null && !Runners[i].Out)
+                    {
+                        n++;
+                    }
+                }
+                return n;
+            }
+        }
+
+        /// <summary>아직 남아 있는(빠지지 않은) 캐릭터들.</summary>
+        public List<SushiCharacter> InCharacters()
+        {
+            var list = new List<SushiCharacter>();
+            for (int i = 0; i < Runners.Count; i++)
+            {
+                if (Runners[i].Ch != null && !Runners[i].Out)
+                {
+                    list.Add(Runners[i].Ch);
+                }
+            }
+            return list;
+        }
+
+        /// <summary>레이스 ReachFinish에서: 한 판 흐름이면 이 캐릭터를 빼고 알려요 (true면 처리 끝).</summary>
+        protected bool MatchFinish(Runner r)
+        {
+            if (!MatchMode || r == null || r.Out)
+            {
+                return MatchMode;
+            }
+            r.Out = true;
+            r.Finished = true;
+            r.FinishTime = Time.time - r.StartTime;
+            r.Ch.Despawn();
+            MatchFinished?.Invoke(r.Ch);
+            return true;
+        }
+
         /// <summary>사람이 조종하는 캐릭터 (화면 글씨·대기 시간 기준).</summary>
         public SushiCharacter Player { get; set; }
 
@@ -52,6 +113,7 @@ namespace SushiRun.Runtime
             public bool Finished;
             public float FinishTime;
             public float Best = -1f;
+            public bool Out; // 한 판 흐름: 완주해서 빠졌거나 탈락 (더는 부활 안 함)
         }
 
         protected readonly List<Runner> Runners = new List<Runner>();
@@ -95,7 +157,7 @@ namespace SushiRun.Runtime
             for (int i = 0; i < Runners.Count; i++)
             {
                 Runner r = Runners[i];
-                if (r.Ch == null)
+                if (r.Ch == null || r.Out)
                 {
                     continue;
                 }
@@ -105,6 +167,13 @@ namespace SushiRun.Runtime
                     {
                         r.Ch.Despawn();
                         r.Fell = true;
+                        if (MatchMode && FallEliminates)
+                        {
+                            r.Out = true; // 한 판 흐름: 탈락 (부활 없음)
+                            OnFell(r);
+                            MatchEliminated?.Invoke(r.Ch);
+                            continue;
+                        }
                         r.RespawnAt = now + RespawnDelay;
                         OnFell(r);
                     }
@@ -134,7 +203,7 @@ namespace SushiRun.Runtime
         public void ForceRespawn(SushiCharacter ch)
         {
             Runner r = Find(ch);
-            if (r == null || r.RespawnAt >= 0f)
+            if (r == null || r.RespawnAt >= 0f || r.Out)
             {
                 return;
             }

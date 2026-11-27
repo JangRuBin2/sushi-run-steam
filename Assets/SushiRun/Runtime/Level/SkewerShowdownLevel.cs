@@ -23,6 +23,8 @@ namespace SushiRun.Runtime
 
         public override string Title => "회전 꼬치 쇼다운 (Final)";
 
+        public override bool FallEliminates => true;
+
         // 꼬치가 멈춰 있는 동안(판 시작·플레이어 부활 직후)은 봇도 때리지 않아요
         public override bool BotAttacksPaused => _low != null && _low.IsHolding;
 
