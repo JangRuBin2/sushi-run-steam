@@ -18,6 +18,8 @@ namespace SushiRun.Runtime
             SkewerShowdown,
             SinkRace,
             SpaceRace,
+            RiceCooker,
+            TeaGarden,
         }
 
         public LevelKind StartLevel = LevelKind.RotatingBelt;
@@ -172,6 +174,14 @@ namespace SushiRun.Runtime
             {
                 _level = levelGo.AddComponent<SpaceRaceLevel>();
             }
+            else if (kind == LevelKind.RiceCooker)
+            {
+                _level = levelGo.AddComponent<RiceCookerLevel>();
+            }
+            else if (kind == LevelKind.TeaGarden)
+            {
+                _level = levelGo.AddComponent<TeaGardenLevel>();
+            }
             else
             {
                 _level = levelGo.AddComponent<SkewerShowdownLevel>();
@@ -272,6 +282,14 @@ namespace SushiRun.Runtime
                 else if (kb.digit4Key.wasPressedThisFrame)
                 {
                     Build(LevelKind.SpaceRace);
+                }
+                else if (kb.digit5Key.wasPressedThisFrame)
+                {
+                    Build(LevelKind.RiceCooker);
+                }
+                else if (kb.digit6Key.wasPressedThisFrame)
+                {
+                    Build(LevelKind.TeaGarden);
                 }
                 if (kb.rKey.wasPressedThisFrame && _level != null && _player != null)
                 {
@@ -412,7 +430,7 @@ namespace SushiRun.Runtime
                 GUILayout.Label(
                     "이동 WASD/방향키 · 시점 마우스 (화면 클릭 = 잠금, Esc = 풀기)\n" +
                     "점프 Space · 다이브 Shift/E · 공격 F\n" +
-                    "R 체크포인트로 · 1 회전 벨트 · 2 꼬치 쇼다운 · 3 설거지통 · 4 우주 · Tab 튜닝 · H 도움말 끄기 · F12 스크린샷\n" +
+                    "R 체크포인트로 · 1 회전 벨트 · 2 꼬치 쇼다운 · 3 설거지통 · 4 우주 · 5 밥솥 · 6 찻잎 정원 · Tab 튜닝 · H 도움말 끄기 · F12 스크린샷\n" +
                     "패드: 왼스틱 이동 · A 점프 · X 다이브 · LT/Y 공격 · 오른스틱 시점 · Select 튜닝 · Start 체크포인트",
                     _small);
             }
