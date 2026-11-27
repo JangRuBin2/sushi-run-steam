@@ -71,6 +71,32 @@ namespace SushiRun.Editor
             EditorApplication.Exit(0);
         }
 
+        public static void FishMarket()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            FishMarketLevel lvl = NewScene().AddComponent<FishMarketLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 10f, -17f), new Vector3(0f, 0f, 0f), Path.Combine(dir, "fish_front.png"));
+            Shot(new Vector3(-26f, 24f, -26f), new Vector3(0f, -2f, 0f), Path.Combine(dir, "fish_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
+        public static void Onsen()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            OnsenLevel lvl = NewScene().AddComponent<OnsenLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 9f, -15f), new Vector3(0f, 1.5f, 0f), Path.Combine(dir, "onsen_front.png"));
+            Shot(new Vector3(-22f, 20f, -22f), new Vector3(0f, 1f, 0f), Path.Combine(dir, "onsen_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
         private static string Arg(string name, string fallback)
         {
             string[] args = System.Environment.GetCommandLineArgs();
