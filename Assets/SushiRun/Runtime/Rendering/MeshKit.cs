@@ -134,6 +134,51 @@ namespace SushiRun.Runtime
             return Build("Lathe", verts, norms, uvs, tris);
         }
 
+        /// <summary>위를 보는 둥근 판 (가운데가 dome만큼 볼록). UV = 위에서 본 x, z (미터) — 텍스처가 늘어나지 않아요.</summary>
+        public static Mesh Disc(float radius, float dome = 0f, int segments = 64, int rings = 6)
+        {
+            var verts = new List<Vector3>();
+            var norms = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            var tris = new List<int>();
+            verts.Add(new Vector3(0f, dome, 0f));
+            norms.Add(Vector3.up);
+            uvs.Add(Vector2.zero);
+            for (int r = 1; r <= rings; r++)
+            {
+                float rr = radius * r / rings;
+                float y = dome * (1f - (rr / radius) * (rr / radius));
+                for (int s = 0; s < segments; s++)
+                {
+                    float a = s * Mathf.PI * 2f / segments;
+                    var p = new Vector3(Mathf.Cos(a) * rr, y, Mathf.Sin(a) * rr);
+                    verts.Add(p);
+                    norms.Add(Vector3.up);
+                    uvs.Add(new Vector2(p.x, p.z));
+                }
+            }
+            for (int s = 0; s < segments; s++)
+            {
+                AddTri(tris, verts, Vector3.up, 0, 1 + s, 1 + (s + 1) % segments);
+            }
+            for (int r = 1; r < rings; r++)
+            {
+                int a0 = 1 + (r - 1) * segments;
+                int b0 = 1 + r * segments;
+                for (int s = 0; s < segments; s++)
+                {
+                    int s1 = (s + 1) % segments;
+                    AddQuad(tris, verts, Vector3.up, a0 + s, a0 + s1, b0 + s1, b0 + s);
+                }
+            }
+            Mesh mesh = Build("Disc", verts, norms, uvs, tris);
+            if (Mathf.Abs(dome) > 1e-4f)
+            {
+                mesh.RecalculateNormals();
+            }
+            return mesh;
+        }
+
         /// <summary>사각형 하나를 삼각형 둘로 — 바깥(expect) 쪽이 앞면이 되게 감는 방향을 맞춰요.</summary>
         private static void AddQuad(List<int> tris, List<Vector3> verts, Vector3 expect, int a, int b, int c, int d)
         {

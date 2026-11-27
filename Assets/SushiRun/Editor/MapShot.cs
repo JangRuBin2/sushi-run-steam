@@ -43,6 +43,60 @@ namespace SushiRun.Editor
             EditorApplication.Exit(0);
         }
 
+        public static void Cooker()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            RiceCookerLevel lvl = NewScene().AddComponent<RiceCookerLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 9f, -16f), new Vector3(0f, 0f, 0f), Path.Combine(dir, "cooker_front.png"));
+            Shot(new Vector3(-5f, 4f, -7f), new Vector3(3f, 0.5f, 3f), Path.Combine(dir, "cooker_close.png"));
+            Shot(new Vector3(-25f, 22f, -25f), new Vector3(0f, -3f, 0f), Path.Combine(dir, "cooker_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
+        public static void Garden()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            TeaGardenLevel lvl = NewScene().AddComponent<TeaGardenLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 10f, -20f), new Vector3(0f, 0f, 0f), Path.Combine(dir, "garden_front.png"));
+            Shot(new Vector3(-6f, 4f, -8f), new Vector3(1f, 0.8f, 1f), Path.Combine(dir, "garden_close.png"));
+            Shot(new Vector3(-28f, 26f, -28f), new Vector3(0f, -2f, 0f), Path.Combine(dir, "garden_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
+        public static void FishMarket()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            FishMarketLevel lvl = NewScene().AddComponent<FishMarketLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 10f, -17f), new Vector3(0f, 0f, 0f), Path.Combine(dir, "fish_front.png"));
+            Shot(new Vector3(-26f, 24f, -26f), new Vector3(0f, -2f, 0f), Path.Combine(dir, "fish_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
+        public static void Onsen()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            OnsenLevel lvl = NewScene().AddComponent<OnsenLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 9f, -15f), new Vector3(0f, 1.5f, 0f), Path.Combine(dir, "onsen_front.png"));
+            Shot(new Vector3(-22f, 20f, -22f), new Vector3(0f, 1f, 0f), Path.Combine(dir, "onsen_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
         private static string Arg(string name, string fallback)
         {
             string[] args = System.Environment.GetCommandLineArgs();

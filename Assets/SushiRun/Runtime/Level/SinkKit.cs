@@ -86,6 +86,54 @@ namespace SushiRun.Runtime
             return m;
         }
 
+        /// <summary>빛나는 재질 (baseMat 복사본 + 발광). 새로 만들어 owned에 넣어요 — 레벨이 없어질 때 지우게.</summary>
+        public static Material Glow(Material baseMat, Color emission, float intensity, List<Material> owned)
+        {
+            var m = new Material(baseMat);
+            m.EnableKeyword("_EMISSION");
+            if (m.HasProperty("_EmissionColor"))
+            {
+                m.SetColor("_EmissionColor", emission * intensity);
+            }
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            owned.Add(m);
+            return m;
+        }
+
+        /// <summary>그림 한 장을 빛 안 받는 재질로 (배경 그림용). 텍스처가 없으면 null.</summary>
+        public static Material Backdrop(string tex, List<Material> owned)
+        {
+            var t = Resources.Load<Texture2D>(tex);
+            if (t == null)
+            {
+                return null;
+            }
+            Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
+            var m = new Material(unlit != null ? unlit : Shader.Find("Unlit/Texture"));
+            m.name = "Backdrop_" + t.name;
+            if (m.HasProperty("_BaseMap"))
+            {
+                m.SetTexture("_BaseMap", t);
+            }
+            m.mainTexture = t;
+            owned.Add(m);
+            return m;
+        }
+
+        /// <summary>둘레 4면 + 아래 배경 그림 (가운데 c, 거리 d). 원형 아레나용.</summary>
+        public static void BackdropBox(Transform root, Material m, Vector3 c, float d)
+        {
+            if (m == null)
+            {
+                return;
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                Quaternion q = Quaternion.Euler(0f, i * 90f, 0f);
+                ProtoMaterials.VisualPart(root, "Backdrop", PrimitiveType.Quad, c + q * new Vector3(0f, 0f, d), new Vector3(2f * d * 1.15f, d * 1.3f, 1f), q, m, false);
+            }
+        }
+
         /// <summary>메시 하나로 된 보이기 전용 파츠.</summary>
         public static GameObject Part(Transform parent, string name, Mesh mesh, Vector3 localPos, Quaternion localRot, Material mat, bool shadows = true)
         {
