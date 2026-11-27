@@ -57,3 +57,9 @@ codex exec --skip-git-repo-check -s workspace-write "<프롬프트: 그림마다
 - 다른 맵 텍스처는 `Resources/<맵>/`에 넣고 `SinkKit.TexMat("Space/kaiten_belt", ...)`처럼 폴더째 부른다.
 - worktree를 처음 열 때는 에셋 가져오기에 몇 분 걸린다. 두 번째부터는 1분 안팎이다.
 - 새 `.cs` 파일의 `.meta`는 GUID 32자리를 꼭 넣는다. 비어 있으면 Unity가 그 파일을 무시해서 "class could not be found"가 난다.
+
+## 5. 디스크 공간 주의 (2026-11-27)
+
+C 드라이브 여유가 2 GB 안팎이다. 작업용 worktree에서 Unity를 처음 돌리면 `Library` 캐시가 약 1.8 GB 생겨 디스크가 꽉 찬다
+(실제로 0바이트가 되어 파일 저장이 실패했다). 확인이 끝나면 worktree의 `Library`·`Temp`·`Logs`를 지운다.
+Codex 원본 PNG는 줄인 JPG를 레포에 넣은 뒤 지워도 된다(캐릭터 3D 변환용 그림은 남긴다).
