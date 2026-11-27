@@ -50,6 +50,7 @@ codex exec --skip-git-repo-check -s workspace-write "<프롬프트: 그림마다
 ```
 
 - 로그에 `error CS`가 있으면 컴파일 오류다. `MAPSHOT_DONE`이 찍히면 사진이 나온 것이다.
-- 사진은 출발·스펀지·컵·결승·전체 5장이다(`Assets/SushiRun/Editor/MapShot.cs`). 새 맵을 만들면 메서드를 하나 더 만든다.
+- 맵마다 메서드가 있다: `MapShot.Sink`(설거지통), `MapShot.Space`(우주). 각 5장(`Assets/SushiRun/Editor/MapShot.cs`). 새 맵을 만들면 메서드를 하나 더 만든다.
+- 다른 맵 텍스처는 `Resources/<맵>/`에 넣고 `SinkKit.TexMat("Space/kaiten_belt", ...)`처럼 폴더째 부른다.
 - worktree를 처음 열 때는 에셋 가져오기에 몇 분 걸린다. 두 번째부터는 1분 안팎이다.
 - 새 `.cs` 파일의 `.meta`는 GUID 32자리를 꼭 넣는다. 비어 있으면 Unity가 그 파일을 무시해서 "class could not be found"가 난다.
