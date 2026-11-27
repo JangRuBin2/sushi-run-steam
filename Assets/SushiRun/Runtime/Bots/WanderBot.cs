@@ -44,6 +44,9 @@ namespace SushiRun.Runtime
         [Tooltip("누른 점프가 몸에 걸리기까지 (초, 대략 한두 물리 틱)")]
         public float JumpInputDelay = 0.04f;
 
+        [Tooltip("휘두르는 막대의 축에서 이만큼은 떨어져 지나가요 (m) — 축 가까이는 막대가 오래 닿아 점프로 못 넘어요")]
+        public float PivotKeepOff = 2f;
+
         [Header("방해꾼")]
         [Tooltip("켜면 가까운 캐릭터를 쫓아가 밀고 때리고 다이브로 들이받아요 (판정은 같고 행동만 달라요)")]
         public bool Troublemaker;
@@ -181,7 +184,9 @@ namespace SushiRun.Runtime
             {
                 _wp = Mathf.Clamp(_wp, 0, Level.BotPath.Count - 1);
                 BotWaypoint wp = Level.BotPath[_wp];
-                target = PathPoint(_wp) + (wp.Jump ? Vector3.zero : _offset);
+                Vector3 point = PathPoint(_wp);
+                // 막대 구역 안의 길 점은 흩어지지 않고 그 자리로 (가장자리로 밀려 나가지 않게), 축에서는 떨어뜨려요
+                target = wp.Jump ? point : SweepAt(point) != null ? PushOffPivot(point, pos) : point + _offset;
                 Vector3 to = target - pos;
                 to.y = 0f;
                 float dist = to.magnitude;
@@ -237,6 +242,7 @@ namespace SushiRun.Runtime
                 target = _wanderTarget;
             }
 
+            bool chasing = false;
             if (Troublemaker)
             {
                 Vector3 victim;
@@ -245,7 +251,12 @@ namespace SushiRun.Runtime
                     target = victim;
                     waitAtEdge = false;
                     _runUpSince = -1f; // 쫓는 동안은 점프하러 달려가지 않아요
+                    chasing = true;
                 }
+            }
+            if (!chasing && !waitAtEdge && _runUpSince < 0f)
+            {
+                target = DetourPivot(pos, target); // 가는 길이 막대 축 옆을 스치면 축을 크게 돌아가요
             }
 
             Vector3 dir = target - pos;
@@ -483,15 +494,21 @@ namespace SushiRun.Runtime
         private bool SweepPathClear(Vector3 pos, float timeError, out float entry)
         {
             entry = float.PositiveInfinity;
-            float speed = Mathf.Max(1f, _ch.Tuning.RunSpeed * _speed);
             KnockHazard zone = null;
             Vector3 a = pos;
             float s0 = 0f;
+            float tAcc = 0f; // 지금까지 걸리는 시간 (발밑 벨트·접시에 실려 가는 만큼 빠르거나 느려요)
+            Vector3 last = pos;
+            float lastSpeed = -1f;
             const float step = 0.35f;
             for (int k = 0; k < 3 && s0 < CrossLookahead; k++)
             {
                 int idx = Mathf.Min(_wp + k, Level.BotPath.Count - 1);
                 Vector3 b = PathPoint(idx);
+                if (!Level.BotPath[idx].Jump && SweepAt(b) != null)
+                {
+                    b = PushOffPivot(b, a); // 실제로 가는 점 (축에서 떨어뜨린)
+                }
                 Vector3 seg = b - a;
                 seg.y = 0f;
                 float len = seg.magnitude;
@@ -499,10 +516,20 @@ namespace SushiRun.Runtime
                 {
                     continue;
                 }
+                Vector3 segN = seg / len;
                 for (float d = 0f; d <= len && s0 + d < CrossLookahead; d += step)
                 {
                     Vector3 p = a + seg * (d / len);
-                    float t = (s0 + d) / speed + timeError;
+                    if (lastSpeed < 0f)
+                    {
+                        lastSpeed = GroundSpeedAlong(last, segN);
+                    }
+                    Vector3 hop = p - last;
+                    hop.y = 0f;
+                    tAcc += hop.magnitude / lastSpeed;
+                    last = p;
+                    lastSpeed = GroundSpeedAlong(p, segN);
+                    float t = tAcc + timeError;
                     if (zone == null)
                     {
                         zone = SweepAt(p);
@@ -525,6 +552,108 @@ namespace SushiRun.Runtime
                 a = b;
             }
             return true;
+        }
+
+        /// <summary>p에서 n 방향으로 달릴 때 땅 기준 속도 (m/s). 발밑이 벨트·접시면 실려 가는 만큼 더하고,
+        /// SteerOnPlatform이 버티는 만큼도 셈해요 (거꾸로 도는 벨트 위에서는 평지보다 한참 느려요).</summary>
+        private float GroundSpeedAlong(Vector3 p, Vector3 n)
+        {
+            Vector3 carry = Vector3.zero;
+            RaycastHit hit;
+            if (Physics.Raycast(p + Vector3.up * 0.5f, Vector3.down, out hit, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            {
+                IPlatformMotion m = hit.collider.GetComponentInParent<IPlatformMotion>();
+                if (m != null)
+                {
+                    carry = m.GetPointVelocity(hit.point);
+                    carry.y = 0f;
+                }
+            }
+            float run = Mathf.Max(0.1f, _ch.Tuning.RunSpeed);
+            Vector3 want = n * _speed - carry * (DriftCompensation() / run);
+            if (want.sqrMagnitude > 1f)
+            {
+                want.Normalize();
+            }
+            return Mathf.Max(0.5f, Vector3.Dot(want * run + carry, n));
+        }
+
+        /// <summary>막대 구역 안의 점이 축에서 PivotKeepOff보다 가까우면 축에서 바깥쪽으로 밀어요 (사람은 축 옆을 안 지나가요).
+        /// 축 바로 위면 from이 있는 쪽으로.</summary>
+        private Vector3 PushOffPivot(Vector3 point, Vector3 from)
+        {
+            KnockHazard h = SweepAt(point);
+            if (h == null || h.HalfLength < PivotKeepOff + 0.5f)
+            {
+                return point;
+            }
+            Vector3 pivot = h.Rotator.transform.position;
+            Vector3 r = point - pivot;
+            r.y = 0f;
+            if (r.magnitude >= PivotKeepOff)
+            {
+                return point;
+            }
+            if (r.magnitude < 0.05f)
+            {
+                r = from - pivot;
+                r.y = 0f;
+                if (r.sqrMagnitude < 1e-4f)
+                {
+                    r = Vector3.right;
+                }
+            }
+            Vector3 o = pivot + r.normalized * PivotKeepOff;
+            o.y = point.y;
+            return o;
+        }
+
+        /// <summary>pos → target 길이 막대 축에서 PivotKeepOff 안을 스치면, 축 옆 PivotKeepOff 거리의 점을 먼저 향해요
+        /// (지금 있는 쪽으로 돌아가요). 안 스치면 target 그대로.</summary>
+        private Vector3 DetourPivot(Vector3 pos, Vector3 target)
+        {
+            List<KnockHazard> hazards = KnockHazard.Active;
+            for (int i = 0; i < hazards.Count; i++)
+            {
+                KnockHazard h = hazards[i];
+                if (h == null || !h.Low || h.Rotator == null || h.HalfLength < PivotKeepOff + 0.5f)
+                {
+                    continue;
+                }
+                if (!InZone(h, pos) && !InZone(h, target))
+                {
+                    continue;
+                }
+                Vector3 pivot = h.Rotator.transform.position;
+                Vector3 seg = target - pos;
+                seg.y = 0f;
+                float len2 = seg.sqrMagnitude;
+                if (len2 < 1e-4f)
+                {
+                    continue;
+                }
+                Vector3 toPivot = pivot - pos;
+                toPivot.y = 0f;
+                float u = Vector3.Dot(toPivot, seg) / len2;
+                if (u <= 0f || u >= 1f)
+                {
+                    continue; // 축이 앞길 옆에 있지 않아요
+                }
+                Vector3 rc = pos + seg * u - pivot;
+                rc.y = 0f;
+                if (rc.magnitude >= PivotKeepOff)
+                {
+                    continue;
+                }
+                if (rc.magnitude < 0.05f)
+                {
+                    rc = new Vector3(-seg.z, 0f, seg.x); // 축으로 곧장 가는 길이면 한쪽으로
+                }
+                Vector3 o = pivot + rc.normalized * (PivotKeepOff * 1.05f);
+                o.y = target.y;
+                return o;
+            }
+            return target;
         }
 
         private KnockHazard SweepAt(Vector3 p)
