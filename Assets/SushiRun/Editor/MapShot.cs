@@ -27,6 +27,22 @@ namespace SushiRun.Editor
             EditorApplication.Exit(0);
         }
 
+        public static void Space()
+        {
+            string dir = Arg("-shotDir", "shots");
+            Directory.CreateDirectory(dir);
+            SpaceRaceLevel lvl = NewScene().AddComponent<SpaceRaceLevel>();
+            lvl.Build();
+            PlaceCharacters(lvl);
+            Shot(new Vector3(0f, 6f, -9f), new Vector3(0f, 0f, 24f), Path.Combine(dir, "space_start.png"));
+            Shot(new Vector3(9f, 9f, 32f), new Vector3(0f, 0f, 55f), Path.Combine(dir, "space_rails.png"));
+            Shot(new Vector3(-8f, 8f, 80f), new Vector3(0f, 0f, 100f), Path.Combine(dir, "space_meteors.png"));
+            Shot(new Vector3(0f, 5f, 106f), new Vector3(0f, 1.5f, 126f), Path.Combine(dir, "space_finish.png"));
+            Shot(new Vector3(-35f, 45f, -15f), new Vector3(0f, 0f, 65f), Path.Combine(dir, "space_overview.png"));
+            Debug.Log("MAPSHOT_DONE");
+            EditorApplication.Exit(0);
+        }
+
         private static string Arg(string name, string fallback)
         {
             string[] args = System.Environment.GetCommandLineArgs();

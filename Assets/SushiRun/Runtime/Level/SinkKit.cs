@@ -46,7 +46,8 @@ namespace SushiRun.Runtime
             }
             m = new Material(Mat(tint, smoothness, metallic));
             m.name = "Sink_" + tex;
-            var t = Resources.Load<Texture2D>("Sink/" + tex);
+            // "Space/kaiten_belt"처럼 폴더를 주면 그 폴더, 이름만 주면 Sink/ (다른 맵도 이 재질 도구를 같이 써요)
+            var t = Resources.Load<Texture2D>(tex.Contains("/") ? tex : "Sink/" + tex);
             if (t != null)
             {
                 t.wrapMode = TextureWrapMode.Repeat;
